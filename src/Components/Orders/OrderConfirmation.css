@@ -1,0 +1,223 @@
+/* Order Confirmation Page Styles */
+.order-confirmation-page {
+  min-height: 100vh;
+  background: #f0fdf4;
+  padding: 2rem 1rem;
+}
+
+.order-confirmation-container {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+/* Order Details Card */
+.order-details-card {
+  background: white;
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.card-header {
+  background: #f0fdf4;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  /* stack circle above text */
+  align-items: center;
+  /* center horizontally */
+  justify-content: center;
+  /* center vertically if header has height */
+  text-align: center;
+  gap: 0.5rem;
+}
+
+
+.header-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: #dcfce7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #16a34a;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1b5e13;
+  margin: 0;
+}
+
+.card-content {
+  padding: 2rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-row:last-of-type {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.detail-value {
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.detail-value-small {
+  font-size: 0.875rem;
+  font-family: 'Courier New', monospace;
+  background: #f1f5f9;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+.payment-status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.total-amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 0 0;
+  margin: 1.5rem -2rem 0;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  background: #dcfce7;
+  border-radius: 1rem;
+}
+
+.total-label {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.total-value {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #16a34a;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  align-items: center;
+  /* center the narrower buttons */
+
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: fit-content;
+  /* shrink to content size */
+  padding: 0.75rem 1rem;
+  /* slightly smaller padding if you like */
+  min-width: 180px;
+  border-radius: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: #16a34a;
+  color: white;
+
+}
+
+.action-btn:hover {
+  background: #15803d;
+}
+
+/* Responsive Design */
+@media (min-width: 640px) {
+  .action-buttons {
+    flex-direction: row;
+  }
+
+  .action-btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .order-confirmation-page {
+    padding: 1rem 0.5rem;
+  }
+
+  .card-content {
+    padding: 1.5rem;
+  }
+
+  .total-amount-row {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .action-btn {
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+
+
+/* ------------ */
+/* Add to OrderConfirmation.css */
+
+/* Product Item Styling */
+.kapil-cart-item-measurement {
+  font-size: 13px;
+  color: #64748b;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  padding: 6px 12px;
+  border-radius: 20px;
+  width: fit-content;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+
+.kapil-cart-discount-badge {
+  font-size: 12px;
+  color: white;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}

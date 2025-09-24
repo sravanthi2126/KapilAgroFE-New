@@ -1,0 +1,655 @@
+/* Payment Container */
+.kapil-payment-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 20px;
+}
+
+/* Back Button */
+.kapil-payment-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #16a34a;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 24px;
+  transition: color 0.2s ease;
+}
+
+.kapil-payment-back:hover {
+  color: #15803d;
+}
+
+/* Payment Layout */
+.kapil-payment-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 24px;
+}
+
+/* Payment Card */
+.kapil-payment-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Payment Card Header */
+.kapil-payment-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #16a34a;
+}
+
+.kapil-payment-card-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f7217;
+  margin: 0;
+}
+
+/* Address Display */
+.kapil-address-display {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+}
+
+.address-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+.address-details p {
+  font-size: 15px;
+  color: #0d0d0e;
+  margin: 6px 0;
+  line-height: 1.6;
+}
+
+.address-phone {
+  font-weight: 600;
+  color: #16a34a !important;
+}
+
+/* Payment Methods Container */
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+/* Payment Method Option Cards */
+.payment-method-option {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.payment-method-option:hover {
+  border-color: #16a34a;
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.15);
+  transform: translateY(-2px);
+}
+
+.payment-method-option.selected {
+  border-color: #16a34a;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Selected state indicator */
+.payment-method-option.selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 5px;
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+}
+
+/* Hide default radio button */
+.payment-method-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Custom radio button indicator */
+.payment-method-option::after {
+  content: '';
+  width: 22px;
+  height: 22px;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  margin-right: 16px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.payment-method-option.selected::after {
+  border-color: #16a34a;
+  background: #16a34a;
+  box-shadow: inset 0 0 0 4px #ffffff, 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
+/* Payment method content layout */
+.payment-method-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-left: 38px; /* Space for custom radio */
+}
+
+.payment-method-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payment-method-title {
+  font-weight: 600;
+  font-size: 17px;
+  color: #1f2937;
+  transition: color 0.3s ease;
+  line-height: 1.3;
+}
+
+.payment-method-option.selected .payment-method-title {
+  color: #16a34a;
+}
+
+.payment-method-desc {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.payment-method-option.selected .payment-method-desc {
+  color: #059669;
+}
+
+/* Payment logos and icons */
+.payment-method-logos {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.payment-logos-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-secure-badge {
+  background: linear-gradient(135deg, #16a34a, #059669);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.payment-method-option.selected .payment-secure-badge {
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  color: #16a34a;
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+}
+
+.payment-method-icon {
+  color: #6b7280;
+  transition: all 0.3s ease;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.payment-method-option.selected .payment-method-icon {
+  color: #16a34a;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.15);
+}
+
+/* Payment Security Info */
+.payment-security-info {
+  margin-top: 8px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.security-features {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 16px;
+}
+
+.security-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+}
+
+.security-icon {
+  font-size: 16px;
+}
+
+/* Animation for selection */
+@keyframes selectPulse {
+  0% { transform: scale(1) translateY(-1px); }
+  50% { transform: scale(1.02) translateY(-2px); }
+  100% { transform: scale(1) translateY(-1px); }
+}
+
+.payment-method-option.selected {
+  animation: selectPulse 0.4s ease-out;
+}
+
+/* Focus styles for accessibility */
+.payment-method-option:focus-within {
+  outline: 3px solid rgba(22, 163, 74, 0.3);
+  outline-offset: 2px;
+}
+
+/* Order Items List */
+.kapil-order-items-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+.kapil-order-item-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #fafafa;
+}
+
+.kapil-order-item-image {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.kapil-order-item-info {
+  flex: 1;
+}
+
+.item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.item-details {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #64748b;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.item-quantity {
+  font-weight: 500;
+}
+
+.item-unit {
+  font-weight: 500;
+  color: #374151;
+}
+
+.item-original-price {
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.item-price {
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.item-discount {
+  font-weight: 500;
+  color: #dc2626;
+  font-size: 11px;
+  background: #fee2e2;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.item-total {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  text-align: right;
+}
+
+.item-total-breakdown {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.item-original-total {
+  font-size: 12px;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.item-final-total {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.item-savings {
+  font-size: 11px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* Price Breakdown */
+.kapil-price-breakdown {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 16px;
+  color: #090909;
+  font-weight: 500;
+}
+
+.price-row.discount {
+  color: #dc2626;
+}
+
+.price-row.savings {
+  color: #16a34a;
+  font-weight: 500;
+  background: #f0f9f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
+.price-row.total {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+  padding-top: 16px;
+}
+
+/* Place Order Button */
+.kapil-place-order-button {
+  width: 100%;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+.kapil-place-order-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #15803d, #166534);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.4);
+}
+
+.kapil-place-order-button:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.kapil-payment-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ffffff40;
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.security-info {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.security-info p {
+  font-size: 15px;
+  color: #191b1f;
+  margin: 0;
+}
+
+.kapil-payment-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid #fecaca;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .kapil-payment-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .kapil-payment-right {
+    order: -1;
+  }
+}
+
+/* Mobile ordering - Delivery Address first, Payment Method second, Order Summary last */
+@media (max-width: 768px) {
+  .kapil-payment-container {
+    margin: 10px auto;
+    padding: 0 16px;
+  }
+
+  .kapil-payment-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Order sections for mobile: 1. Address, 2. Payment, 3. Order Summary */
+  .delivery-address-section {
+    order: 1;
+  }
+
+  .payment-method-section {
+    order: 2;
+  }
+
+  .order-summary-section {
+    order: 3;
+  }
+
+  .kapil-payment-card {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .kapil-payment-card-header h3 {
+    font-size: 16px;
+  }
+
+  .address-name {
+    font-size: 16px;
+  }
+
+  .payment-method-option {
+    padding: 16px;
+  }
+  
+  .payment-method-content {
+    margin-left: 32px;
+  }
+  
+  .payment-method-option::after {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+  }
+  
+  .payment-method-title {
+    font-size: 16px;
+  }
+  
+  .payment-method-desc {
+    font-size: 13px;
+  }
+  
+  .security-features {
+    gap: 12px;
+  }
+  
+  .security-item {
+    font-size: 11px;
+  }
+
+  .kapil-order-items-list {
+    max-height: 250px;
+  }
+
+  .item-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .kapil-payment-card {
+    margin: 0 -20px 20px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .kapil-order-item-card {
+    padding: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .kapil-order-item-image {
+    width: 40px;
+    height: 40px;
+  }
+
+  .item-name {
+    font-size: 13px;
+  }
+
+  .item-details {
+    font-size: 11px;
+  }
+
+  .price-row {
+    font-size: 13px;
+  }
+
+  .price-row.total {
+    font-size: 16px;
+  }
+
+  .item-total-breakdown {
+    align-items: flex-start;
+  }
+
+  .payment-method-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .payment-method-logos,
+  .payment-method-icon {
+    align-self: flex-end;
+  }
+  
+  .security-features {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
