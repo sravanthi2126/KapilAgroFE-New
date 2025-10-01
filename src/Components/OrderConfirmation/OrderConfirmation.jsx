@@ -100,8 +100,8 @@ const OrderConfirmation = () => {
         });
 
         if (response.status === 200 && response.data.status === 'success') {
-          console.log('Fetched order details:', response.data.orderDetails);
-          setOrderDetails(response.data.orderDetails);
+          console.log('Fetched order details:', response.data.data);
+          setOrderDetails(response.data.data);
         } else {
           showError('Failed to fetch order details', { autoClose: false });
         }
