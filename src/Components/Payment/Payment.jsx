@@ -104,6 +104,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   };
 
   const handleRazorpayPayment = async (orderData) => {
+    console.log('orderData in Razorpay options:', orderData);
     try {
       const sdkLoaded = await loadRazorpayScript();
       if (!sdkLoaded) {
@@ -123,7 +124,8 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
               razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature || 'dummy_signature',
-              orderId: orderData.orderId,
+              orderId: orderData.tempOrderId,
+
             });
           },
           prefill: {
@@ -146,6 +148,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
   const verifyPayment = async (paymentData) => {
     try {
+      console.log('Verifying payment with data:', paymentData);
       const token = localStorage.getItem('token');
       const payload = {
         razorpayOrderId: paymentData.razorpayOrderId,
@@ -165,8 +168,11 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
       if (response.data.status === 'success') {
         // Check if backend returns permanent orderId
+        console.log('Payment verification successful:', response);
+        console.log('Response from payment/success:', response.data);
         let permanentOrderId = response.data.data?.orderId || paymentData.orderId;
         console.log('Permanent orderId from payment/success:', permanentOrderId);
+        
 
         // Fetch order details with permanent orderId
         let orderDetails = null;
@@ -179,7 +185,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           });
 
           if (orderResponse.data.status === 'success') {
-            orderDetails = orderResponse.data.orderDetails;
+            orderDetails = orderResponse.data.data;
           }
         } catch (fetchError) {
           console.error('Error fetching order with orderId:', permanentOrderId, fetchError);
@@ -562,10 +568,10 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                     ? 'Calculating...'
                     : currentOrderDetails.shippingcharges === undefined ||
                       isNaN(parseFloat(currentOrderDetails.shippingcharges))
-                    ? 'Error: Unable to load shipping charges'
-                    : parseFloat(currentOrderDetails.shippingcharges) === 0
-                    ? 'FREE'
-                    : `₹${parseFloat(currentOrderDetails.shippingcharges).toFixed(2)}`}
+                      ? 'Error: Unable to load shipping charges'
+                      : parseFloat(currentOrderDetails.shippingcharges) === 0
+                        ? 'FREE'
+                        : `₹${parseFloat(currentOrderDetails.shippingcharges).toFixed(2)}`}
                 </span>
               </div>
               {parseFloat(currentOrderDetails.totalTaxAmount || 0) > 0 && (
