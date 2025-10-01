@@ -21,7 +21,7 @@ import ShippingPolicy from './Components/QuickLinks/ShippingPolicy';
 import RefundPolicy from './Components/QuickLinks/RefundPolicy';
 import Address from './Components/Address/Address';
 import Payment from './Components/Payment/Payment';
-import OrderConfirmation from './Components/Orders/OrderConfirmation';
+import OrderConfirmation from './Components/OrderConfirmation/OrderConfirmation';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 

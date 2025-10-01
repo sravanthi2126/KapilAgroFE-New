@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Package, Download, CheckCircle } from 'lucide-react';
 import { apiClient } from '../../services/authService';
-import { showInfo, showError } from '../../utils/toastUtils'; // Import toast utilities
+import { showInfo, showError } from '../../utils/toastUtils';
 import './OrderConfirmation.css';
 
 const OrderConfirmation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [orderDetails, setOrderDetails] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [invoiceDetails, setInvoiceDetails] = useState(null);
 
   const formatDate = (date) => {
@@ -71,7 +71,6 @@ const OrderConfirmation = () => {
 
       if (response.status === 200 && response.data.status === 'success') {
         setInvoiceDetails(response.data.data);
-        // Trigger browser download (adjust if API provides direct URL)
         const invoiceUrl = `/user/invoice/INV-${orderDetails.orderId}/download`;
         window.open(invoiceUrl, '_blank');
       } else {
@@ -84,37 +83,56 @@ const OrderConfirmation = () => {
   };
 
   useEffect(() => {
-    if (location.state) {
-      setOrderDetails(location.state.orderDetails || location.state);
-      setLoading(false);
-    } else {
-      const urlParams = new URLSearchParams(location.search);
-      const orderId = urlParams.get('orderId');
+    const fetchOrderDetails = async (orderId) => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          showInfo('Please log in to view order details', {
+            autoClose: 5000,
+            onClick: () => navigate('/login'),
+          });
+          return;
+        }
 
-      if (orderId) {
-        const fetchOrderDetails = async () => {
-          try {
-            setLoading(true);
-            const token = localStorage.getItem('token');
-            const response = await apiClient.get(`/orders/${orderId}`, {
-              headers: { 'Authorization': `Bearer ${token}` },
-            });
-            if (response.status === 200 && response.data.status === 'success') {
-              setOrderDetails(response.data.data);
-            } else {
-              showError('Failed to fetch order details', { autoClose: false });
-            }
-          } catch (error) {
-            console.error('Error fetching order details:', error);
-            showError('Error fetching order details', { autoClose: false });
-          } finally {
-            setLoading(false);
-          }
-        };
-        fetchOrderDetails();
-      } else {
+        const response = await apiClient.get(`/user/orders/${orderId}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (response.status === 200 && response.data.status === 'success') {
+          console.log('Fetched order details:', response.data.orderDetails);
+          setOrderDetails(response.data.orderDetails);
+        } else {
+          showError('Failed to fetch order details', { autoClose: false });
+        }
+      } catch (error) {
+        console.error('Error fetching order details:', error);
+        if (error.response?.status === 400 && error.response?.data?.message.includes('Order ID is missing or invalid')) {
+          showError('Invalid Order ID. Please check your order history or contact support.', {
+            autoClose: false,
+            onClick: () => navigate('/orders'),
+          });
+        } else {
+          showError('Error fetching order details. Please try again.', { autoClose: false });
+        }
+      } finally {
         setLoading(false);
       }
+    };
+
+    // Get orderId from location.state or URL query
+    const urlParams = new URLSearchParams(location.search);
+    const orderIdFromQuery = urlParams.get('orderId');
+    const orderIdFromState = location.state?.orderDetails?.orderId || location.state?.orderId;
+
+    const orderId = orderIdFromState || orderIdFromQuery;
+
+    if (orderId) {
+      console.log('Fetching order details for orderId:', orderId);
+      fetchOrderDetails(orderId);
+    } else {
+      setLoading(false);
+      showError('Order ID not found. Please check your order history.', { autoClose: false });
     }
   }, [location]);
 

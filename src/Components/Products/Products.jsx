@@ -10,11 +10,13 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
   const [products, setProducts] = useState([]);
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedPlantAge, setSelectedPlantAge] = useState('1');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [buyingNow, setBuyingNow] = useState(false);
   const { categoryId } = useParams();
   const { state } = useLocation();
   const categoryName = state?.categoryName || 'All Products';
@@ -34,6 +36,21 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
               const variantResponse = await apiClient.get(
                 `/user/product-variants/product/${product.productId}`
               );
+              
+              // Determine product category
+              const category = product.category ? product.category.toLowerCase() : '';
+              const productName = product.productName ? product.productName.toLowerCase() : '';
+              const isPlant = category === 'plants' || 
+                            category.includes('plant') || 
+                            productName.includes('plant');
+              const isFertilizer = category === 'fertilizers' || 
+                               category === 'fertilizer' ||
+                               category.includes('urea') ||
+                               category.includes('vermicompost') ||
+                               productName.includes('urea') ||
+                               productName.includes('vermicompost') ||
+                               productName.includes('fertilizer');
+
               return {
                 ...product,
                 variants:
@@ -41,9 +58,12 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
                   variantResponse.data.status === 'success'
                     ? variantResponse.data.data.map((variant) => ({
                         ...variant,
-                        unitOfMeasurement: variant.unitOfMeasurement || null, // Updated to match API
+                        unitOfMeasurement: variant.unitOfMeasurement || null,
                       }))
                     : [],
+                isPlant: isPlant,
+                isFertilizer: isFertilizer,
+                categoryType: isPlant ? 'plant' : isFertilizer ? 'fertilizer' : 'other'
               };
             } catch (err) {
               console.error(
@@ -94,6 +114,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
   const showProductDetail = (product) => {
     setCurrentProduct(product);
     setSelectedVariant(product.variants[0] || null);
+    setSelectedPlantAge('1');
     setMainImageIndex(0);
     setShowDetail(true);
   };
@@ -132,7 +153,8 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
       const payload = {
         variantId: selectedVariant.variantId,
         quantity: 1,
-        unitOfMeasurement: selectedVariant.unitOfMeasurement || null, // Updated to match API
+        unitOfMeasurement: selectedVariant.unitOfMeasurement || null,
+        plantAge: currentProduct.isPlant ? selectedPlantAge : null,
       };
 
       const response = await apiClient.post('/user/cart/add', payload, {
@@ -153,7 +175,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
               after_discount_price: item.afterDiscountPrice,
               image_url: item.imageUrl,
               product_name: item.productName,
-              unit_of_measurement: item.unitOfMeasurement || null, // Updated to match API
+              unit_of_measurement: item.unitOfMeasurement || null,
             }));
             setCart(detailedCart);
           }
@@ -192,19 +214,75 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
     }
   };
 
-  const buyNow = () => {
+  const buyNow = async () => {
     if (!currentProduct || !selectedVariant) {
       toast.error('Please select a product variant');
       return;
     }
+    
     const token = localStorage.getItem('token');
     if (!token) {
       toast.error('Please log in to proceed with purchase');
       setIsLoginOpen(true);
       return;
     }
-    toast.info('Redirecting to checkout...');
-    // Add your buy now logic here
+
+    setBuyingNow(true);
+
+    try {
+      // Add item to cart first
+      const payload = {
+        variantId: selectedVariant.variantId,
+        quantity: 1,
+        unitOfMeasurement: selectedVariant.unitOfMeasurement || null,
+        plantAge: currentProduct.isPlant ? selectedPlantAge : null,
+      };
+
+      const response = await apiClient.post('/user/cart/add', payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 201 && response.data.status === 'success') {
+        // Fetch updated cart
+        const cartResponse = await apiClient.get('/user/cart/usercart');
+        if (cartResponse.status === 200 && cartResponse.data.status === 'success') {
+          const detailedCart = cartResponse.data.data.map((item) => ({
+            ...item,
+            localQuantity: item.quantity,
+            after_discount_price: item.afterDiscountPrice,
+            image_url: item.imageUrl,
+            product_name: item.productName,
+            unit_of_measurement: item.unitOfMeasurement || null,
+          }));
+          setCart(detailedCart);
+          
+          // Navigate to address page
+          navigate('/address', { state: { cartItems: detailedCart } });
+        }
+      } else {
+        const errorMessage = response.data?.message || 'Failed to process buy now';
+        toast.error(errorMessage);
+      }
+    } catch (err) {
+      console.error('Buy now error:', err);
+      let errorMessage = 'Failed to process buy now';
+      if (err.response?.status === 403) {
+        errorMessage = 'Please log in to proceed with purchase';
+        setIsLoginOpen(true);
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Session expired. Please log in again';
+        localStorage.removeItem('token');
+        setIsLoginOpen(true);
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setBuyingNow(false);
+    }
   };
 
   const getProductImage = (product) =>
@@ -222,6 +300,36 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
   const hasDiscount = (variant) => {
     return variant && variant.originalAmount && variant.afterDiscountAmount && 
            variant.originalAmount > variant.afterDiscountAmount;
+  };
+
+  const getCurrentPrice = (variant, plantAge) => {
+    if (!variant) return { current: 0, original: 0 };
+    
+    if (currentProduct?.isPlant && plantAge) {
+      // For plants, calculate price based on age
+      const basePrice = variant.originalAmount || variant.afterDiscountAmount;
+      let ageMultiplier = 1;
+      switch (plantAge) {
+        case '2':
+          ageMultiplier = 1.5;
+          break;
+        case '3':
+          ageMultiplier = 2;
+          break;
+        default:
+          ageMultiplier = 1;
+      }
+      const calculatedPrice = basePrice * ageMultiplier;
+      return {
+        current: calculatedPrice,
+        original: hasDiscount(variant) ? calculatedPrice / (1 - (calculateDiscount(variant) || 0) / 100) : calculatedPrice
+      };
+    }
+    
+    return {
+      current: variant.afterDiscountAmount || variant.originalAmount,
+      original: variant.originalAmount
+    };
   };
 
   if (loading) {
@@ -276,6 +384,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
   if (showDetail && currentProduct) {
     const discount = selectedVariant ? calculateDiscount(selectedVariant) : null;
     const images = currentProduct.images || [getProductImage(currentProduct)];
+    const priceInfo = getCurrentPrice(selectedVariant, selectedPlantAge);
 
     return (
       <div className="products-container">
@@ -325,6 +434,30 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
 
             <div className="product-detail-info">
               <h2 className="product-detail-title">{currentProduct.productName}</h2>
+              <p className="product-category-badge">
+                Category: {currentProduct.category}
+                {currentProduct.isPlant && <span className="plant-indicator"> 🌱 Plant</span>}
+                {currentProduct.isFertilizer && <span className="fertilizer-indicator"> 🌿 Fertilizer</span>}
+              </p>
+
+              {/* Plant Age Selector - Only for plants */}
+              {currentProduct.isPlant && (
+                <div className="plant-age-section">
+                  <h3 className="variant-title">Choose Plant Age:</h3>
+                  <div className="plant-age-options">
+                    {['1', '2', '3'].map((age) => (
+                      <div
+                        key={age}
+                        className={`plant-age-option ${selectedPlantAge === age ? 'selected' : ''}`}
+                        onClick={() => setSelectedPlantAge(age)}
+                      >
+                        <div className="age-label">{age} Year{age !== '1' ? 's' : ''}</div>
+                        <div className="age-price">₹{getCurrentPrice(selectedVariant, age).current.toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {currentProduct.variants && currentProduct.variants.length > 0 && (
                 <div className="variants-section">
@@ -343,7 +476,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
                           onClick={() => selectVariant(variant)}
                         >
                           <div className="variant-name">{variant.variantName}</div>
-                          <div className="variant-unit"> {variant.unitOfMeasurement}</div>
+                          <div className="variant-unit">{variant.unitOfMeasurement}</div>
                           <div className="variant-price">₹{variant.afterDiscountAmount}</div>
                           {variantHasDiscount && (
                             <>
@@ -353,7 +486,6 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
                               )}
                             </>
                           )}
-                         
                         </div>
                       );
                     })}
@@ -363,9 +495,9 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
 
               {selectedVariant && (
                 <div className="product-detail-price">
-                  <span className="current-price">₹{selectedVariant.afterDiscountAmount}</span>
-                  {hasDiscount(selectedVariant) && (
-                    <span className="original-price">₹{selectedVariant.originalAmount}</span>
+                  <span className="current-price">₹{priceInfo.current.toFixed(2)}</span>
+                  {hasDiscount(selectedVariant) && priceInfo.original > priceInfo.current && (
+                    <span className="original-price">₹{priceInfo.original.toFixed(2)}</span>
                   )}
                   <span className="unit-measurement">({selectedVariant.unitOfMeasurement})</span>
                 </div>
@@ -402,9 +534,9 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
                 <button
                   className="btn-large btn-buy-now"
                   onClick={buyNow}
-                  disabled={!selectedVariant}
+                  disabled={buyingNow || !selectedVariant}
                 >
-                  Buy Now
+                  {buyingNow ? 'Processing...' : 'Buy Now'}
                 </button>
               </div>
             </div>
@@ -473,6 +605,9 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
                   />
 
                   {discount && <div className="discount-badge">{discount}% OFF</div>}
+                  
+                  {product.isPlant && <div className="product-type-badge plant-badge">🌱 Plant</div>}
+                  {product.isFertilizer && <div className="product-type-badge fertilizer-badge">🌿 Fertilizer</div>}
 
                   <button
                     className={`wishlist-btn ${
