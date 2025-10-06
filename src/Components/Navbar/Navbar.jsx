@@ -1,3 +1,4 @@
+// Navbar.jsx (Updated)
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, User, Search as SearchIcon, Heart } from 'lucide-react';
@@ -45,8 +46,17 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
       loadUser();
     };
 
+    const handleLogoutEvent = () => {
+      setIsLoginOpen(true);
+      setUser(null);
+      setCart([]);
+      setIsMobileMenuOpen(false);
+      showSuccess('Session expired. Please log in again.');
+    };
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('userLoggedIn', handleLoginEvent);
+    window.addEventListener('userLoggedOut', handleLogoutEvent);
 
     // Periodic user check every 1 day
     const intervalId = setInterval(loadUser, 24 * 60 * 60 * 1000);
@@ -54,6 +64,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('userLoggedIn', handleLoginEvent);
+      window.removeEventListener('userLoggedOut', handleLogoutEvent);
       clearInterval(intervalId);
     };
   }, []);
@@ -62,6 +73,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     dismissAllToasts();
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('userId');
     localStorage.removeItem('role');
     localStorage.removeItem('name');
