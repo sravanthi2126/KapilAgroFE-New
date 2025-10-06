@@ -1,8 +1,9 @@
+// LoginModal.jsx (Updated)
 import React, { useState } from 'react';
 import { X, Mail, Eye, EyeOff, Phone, User, Smartphone } from 'lucide-react';
 import { toast } from 'react-toastify';
 import './LoginModal.css';
-import { apiClient } from '../../services/authService';
+import { apiClient, scheduleTokenRefresh } from '../../services/authService';
 
 const LoginModal = ({ isOpen, setIsOpen, setCurrentPage, setCart }) => {
   console.log('LoginModal rendering, isOpen:', isOpen);
@@ -188,11 +189,13 @@ const LoginModal = ({ isOpen, setIsOpen, setCurrentPage, setCart }) => {
 
       localStorage.setItem('user', JSON.stringify(userInfo));
       localStorage.setItem('token', result.data?.token || '');
+      localStorage.setItem('refreshToken', result.data?.refreshToken || '');
       localStorage.setItem('userId', result.data?.userId || '');
       localStorage.setItem('role', result.data?.role || 'user');
       localStorage.setItem('name', userInfo.name);
 
       await fetchCart();
+      scheduleTokenRefresh(); // Schedule proactive token refresh
       window.dispatchEvent(new CustomEvent('userLoggedIn'));
       setCurrentPage('home');
       toast.success(isRegister ? 'Account created successfully!' : 'Logged in successfully!');

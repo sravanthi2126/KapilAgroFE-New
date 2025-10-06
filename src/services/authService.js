@@ -1,4 +1,6 @@
+// authService.js
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode'; // Changed to named import
 
 const apiClient = axios.create({
   baseURL: 'http://localhost:8080',
@@ -17,12 +19,90 @@ const setAuthToken = (token) => {
   }
 };
 
+// Helper function to check if token is expired
+export const isTokenExpired = (token) => {
+  if (!token) return true;
+  try {
+    const decoded = jwtDecode(token);
+    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+    return decoded.exp < currentTime;
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return true; // Treat invalid tokens as expired
+  }
+};
+
+// Modified isAuthenticated function
+export const isAuthenticated = () => {
+  const token = localStorage.getItem('token');
+  return token && !isTokenExpired(token);
+};
+
+// Function to refresh access token
+export const refreshAccessToken = async () => {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await apiClient.post('/user/refresh-token', { refreshToken });
+    const { token, refreshToken: newRefreshToken } = response.data;
+
+    // Update tokens in localStorage
+    localStorage.setItem('token', token);
+    localStorage.setItem('refreshToken', newRefreshToken || refreshToken); // Update refresh token if provided
+    setAuthToken(token);
+
+    return token;
+  } catch (error) {
+    console.error('Failed to refresh token:', error);
+    clearAuth();
+    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    throw error;
+  }
+};
+
+// Schedule token refresh based on expiration time
+export const scheduleTokenRefresh = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const decoded = jwtDecode(token);
+    const currentTime = Math.floor(Date.now() / 1000);
+    const expiresIn = decoded.exp - currentTime;
+    
+    // Refresh token 1 minute before expiration
+    const refreshTime = (expiresIn - 60) * 1000; // Convert to milliseconds
+
+    if (refreshTime > 0) {
+      setTimeout(async () => {
+        try {
+          await refreshAccessToken();
+          console.log('Token refreshed proactively');
+          scheduleTokenRefresh(); // Schedule next refresh
+        } catch (error) {
+          console.error('Proactive token refresh failed:', error);
+        }
+      }, refreshTime);
+    }
+  } catch (error) {
+    console.error('Error scheduling token refresh:', error);
+  }
+};
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && !isTokenExpired(token)) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else if (token) {
+      console.log('Token expired, clearing auth');
+      clearAuth();
+      // Optionally redirect to login page
+      window.dispatchEvent(new CustomEvent('userLoggedOut'));
     }
     
     // Log request for debugging
@@ -49,8 +129,8 @@ apiClient.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
-    // Enhanced error logging
+  async (error) => {
+    const originalRequest = error.config;
     console.error('API Error Details:', {
       url: error.config?.url,
       method: error.config?.method?.toUpperCase(),
@@ -61,13 +141,26 @@ apiClient.interceptors.response.use(
       code: error.code
     });
 
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true; // Prevent infinite retry loops
+      try {
+        const newToken = await refreshAccessToken();
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(originalRequest); // Retry the original request
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        // Redirect to login page or show login modal
+        window.location.href = '/';
+        return Promise.reject(refreshError);
+      }
+    }
+
     if (error.response) {
       // Handle specific status codes
       switch (error.response.status) {
         case 401:
           console.log('Unauthorized - Token expired or invalid');
           localStorage.removeItem('token');
-          // Don't redirect here, let components handle it
           break;
         case 403:
           console.log('Forbidden - Insufficient permissions');
@@ -162,12 +255,6 @@ export const del = async (url, config = {}) => {
   }
 };
 
-// Helper function to check if user is authenticated
-export const isAuthenticated = () => {
-  const token = localStorage.getItem('token');
-  return !!token;
-};
-
 // Helper function to get current user token
 export const getAuthToken = () => {
   return localStorage.getItem('token');
@@ -176,6 +263,7 @@ export const getAuthToken = () => {
 // Helper function to clear authentication
 export const clearAuth = () => {
   localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
   delete apiClient.defaults.headers.Authorization;
 };
 

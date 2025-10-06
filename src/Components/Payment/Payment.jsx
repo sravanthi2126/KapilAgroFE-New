@@ -1,3 +1,4 @@
+// Payment.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -9,8 +10,6 @@ import './Payment.css';
 const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Get data from location state
   const { cartItems = [], orderDetails = null, shippingAddress = {}, billingAddress = {} } = location.state || {};
 
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
@@ -34,16 +33,13 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       try {
         const token = localStorage.getItem('token');
         const response = await apiClient.get(`/user/orders/${orderDetails.orderId}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         });
 
         if (response.data.status === 'success') {
           setCurrentOrderDetails({
-            ...response.data.orderDetails,
-            shippingcharges: response.data.orderDetails.shippingAmount,
+            ...response.data.data, // Backend returns order under data
+            shippingcharges: response.data.data.shippingAmount,
           });
         } else {
           throw new Error('Failed to fetch order details');
@@ -51,30 +47,15 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       } catch (err) {
         console.error('Error fetching order details:', err);
         setError('Failed to fetch shipping details. Please try again.');
-        toast.error('Failed to fetch shipping details. Please try again.', {
-          position: 'bottom-right',
-          autoClose: 5000,
-        });
+        toast.error('Failed to fetch shipping details. Please try again.', { position: 'bottom-right', autoClose: 5000 });
       } finally {
         setFetchingShipping(false);
       }
     };
 
-    if (cartItems.length === 0) {
-      setError('No items in cart. Please add items to proceed.');
-      toast.error('No items in cart. Please add items to proceed.', {
-        position: 'bottom-right',
-        autoClose: 5000,
-      });
-      return;
-    }
-
-    if (!orderDetails) {
-      setError('Order details not found. Please go back and try again.');
-      toast.error('Order details not found. Please go back and try again.', {
-        position: 'bottom-right',
-        autoClose: 5000,
-      });
+    if (cartItems.length === 0 || !orderDetails) {
+      setError('Invalid order data. Please go back and try again.');
+      toast.error('Invalid order data. Please go back and try again.', { position: 'bottom-right', autoClose: 5000 });
       return;
     }
 
@@ -106,11 +87,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   const handleRazorpayPayment = async (orderData) => {
     console.log('orderData in Razorpay options:', orderData);
     try {
-      const sdkLoaded = await loadRazorpayScript();
-      if (!sdkLoaded) {
-        throw new Error('Razorpay SDK failed to load. Please refresh and try again.');
-      }
-
+      await loadRazorpayScript();
       return new Promise((resolve, reject) => {
         const options = {
           key: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_OCmyT47D47k8rb',
@@ -121,9 +98,10 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           order_id: orderData.razorpayOrderId,
           handler: function (response) {
             resolve({
-              razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
+              razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature || 'dummy_signature',
+ // Temp orderId
               orderId: orderData.tempOrderId,
 
             });
@@ -158,23 +136,18 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         orderId: paymentData.orderId, // Temp orderId
       };
 
-      // Call payment success endpoint
       const response = await apiClient.post('/user/orders/payment/success', payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       });
 
       if (response.data.status === 'success') {
-        // Check if backend returns permanent orderId
-        console.log('Payment verification successful:', response);
-        console.log('Response from payment/success:', response.data);
-        let permanentOrderId = response.data.data?.orderId || paymentData.orderId;
+
+
         console.log('Permanent orderId from payment/success:', permanentOrderId);
         
 
         // Fetch order details with permanent orderId
+
         let orderDetails = null;
         try {
           const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
@@ -208,70 +181,59 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           }
         }
 
-        if (orderDetails) {
+
+        if (orderResponse.data.status === 'success') {
           return {
             success: true,
             message: response.data.message,
             shipway_status: response.data.shipway_status || 'success',
             orderDetails: {
-              orderId: orderDetails.orderId, // Permanent orderId
+              orderId: permanentOrderId,
               razorpayOrderId: paymentData.razorpayOrderId,
               razorpayPaymentId: paymentData.razorpayPaymentId,
-              totalAmount: orderDetails.totalAmount,
-              paymentMethod: orderDetails.paymentMethod || 'Online Payment (Razorpay)',
-              paymentStatus: orderDetails.paymentStatus || 'Success',
-              orderDate: orderDetails.orderDate || new Date().toISOString(),
-              shippingcharges: orderDetails.shippingAmount,
-              subtotalAmount: orderDetails.subtotalAmount,
-              originalAmount: orderDetails.originalAmount,
-              productDiscountAmount: orderDetails.productDiscountAmount,
-              orderDiscountAmount: orderDetails.orderDiscountAmount,
-              totalTaxAmount: orderDetails.totalTaxAmount,
+              totalAmount: orderResponse.data.data.totalAmount,
+              paymentMethod: orderResponse.data.data.paymentMethod || 'Online Payment (Razorpay)',
+              paymentStatus: orderResponse.data.data.orderStatus || 'Success', // Map orderStatus to paymentStatus
+              orderDate: orderResponse.data.data.placedAt, // Use placedAt
+              shippingcharges: orderResponse.data.data.shippingAmount,
+              subtotalAmount: orderResponse.data.data.subtotalAmount,
+              originalAmount: orderResponse.data.data.originalAmount,
+              productDiscountAmount: orderResponse.data.data.productDiscountAmount,
+              orderDiscountAmount: orderResponse.data.data.orderDiscountAmount,
+              totalTaxAmount: orderResponse.data.data.taxAmount,
+              orderItems: orderResponse.data.data.orderItems, // Include orderItems
             },
           };
         } else {
-          throw new Error('Failed to fetch updated order details');
+          throw new Error('Failed to fetch order details');
         }
       } else {
         throw new Error(response.data?.message || 'Payment verification failed');
       }
     } catch (error) {
-      console.error('Payment verification failed:', {
-        message: error.message,
-        response: error.response?.data,
-      });
+      console.error('Payment verification failed:', error);
       throw error;
     }
   };
 
   const navigateToOrderConfirmation = (orderData, successMessage) => {
-    console.log('Navigating to order confirmation with orderId:', orderData.orderDetails?.orderId || orderData.orderId);
+    console.log('Navigating to order confirmation with orderId:', orderData.orderDetails?.orderId);
     setCart([]);
-    toast.success(successMessage, {
-      position: 'bottom-right',
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    });
+    toast.success(successMessage, { position: 'bottom-right', autoClose: 5000 });
 
-    const orderId = orderData.orderDetails?.orderId || orderData.orderId;
+    const orderId = orderData.orderDetails?.orderId;
     if (!orderId) {
       console.error('No orderId found for navigation');
-      toast.error('Order ID not found. Please contact support.', {
-        position: 'bottom-right',
-        autoClose: 5000,
-      });
+      toast.error('Order ID not found. Please contact support.', { position: 'bottom-right', autoClose: 5000 });
       return;
     }
 
     try {
       navigate('/order-confirmation', {
         state: {
-          orderId: orderId, // Permanent orderId
+          orderId,
           cartItems,
-          orderDetails: orderData.orderDetails || orderData,
+          orderDetails: orderData.orderDetails,
           shippingAddress,
           billingAddress,
           orderSummary: {
@@ -294,10 +256,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   const handlePlaceOrder = async () => {
     if (!currentOrderDetails) {
       setError('Order details not found. Please go back and try again.');
-      toast.error('Order details not found. Please go back and try again.', {
-        position: 'bottom-right',
-        autoClose: 5000,
-      });
+      toast.error('Order details not found. Please go back and try again.', { position: 'bottom-right', autoClose: 5000 });
       return;
     }
 
@@ -312,7 +271,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             totalAmount: currentOrderDetails.totalAmount,
             paymentMethod: 'Cash on Delivery',
             paymentStatus: 'Pending',
-            orderDate: currentOrderDetails.orderDate || new Date().toISOString(),
+            orderDate: currentOrderDetails.placedAt || new Date().toISOString(),
             shippingcharges: currentOrderDetails.shippingcharges,
           },
         };
@@ -324,7 +283,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           razorpayPaymentId: paymentData.razorpayPaymentId,
           razorpaySignature: paymentData.razorpaySignature,
           amount: parseFloat(currentOrderDetails.totalAmount),
-          orderId: paymentData.orderId, // Temp orderId
+          orderId: paymentData.orderId,
         });
 
         if (verificationResult.success) {
@@ -344,46 +303,26 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         }
       }
     } catch (error) {
-      console.error('Order placement error:', {
-        message: error.message,
-        response: error.response?.data,
-      });
+      console.error('Order placement error:', error);
       let errorMessage = 'Failed to place order';
-
       if (error.message === 'Payment cancelled by user') {
         errorMessage = 'Payment was cancelled';
-        toast.info('Payment was cancelled. Your order is saved and you can retry payment.', {
-          position: 'bottom-right',
-          autoClose: 5000,
-        });
-      } else if (error.message === 'Razorpay SDK not loaded. Please refresh the page and try again.') {
+        toast.info(errorMessage, { position: 'bottom-right', autoClose: 5000 });
+      } else if (error.message.includes('Razorpay SDK')) {
         errorMessage = error.message;
         toast.error(errorMessage, { position: 'bottom-right', autoClose: 5000 });
       } else if (error.response?.status === 400) {
         errorMessage = 'Invalid Order ID. Please check your order history or try again.';
-        toast.error(errorMessage, {
-          position: 'bottom-right',
-          autoClose: 5000,
-          onClick: () => navigate('/order-confirmation'), // Redirect to order confirmation if possible
-        });
+        toast.error(errorMessage, { position: 'bottom-right', autoClose: 5000, onClick: () => navigate('/order-confirmation') });
       } else if (error.response?.status === 401 || error.response?.status === 403) {
         errorMessage = 'Session expired. Please log in again';
         localStorage.removeItem('token');
-        toast.info(errorMessage, {
-          position: 'bottom-right',
-          autoClose: 5000,
-          onClick: () => setIsLoginOpen(true),
-        });
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      setError(errorMessage);
-      if (error.message !== 'Payment cancelled by user') {
+        toast.info(errorMessage, { position: 'bottom-right', autoClose: 5000, onClick: () => setIsLoginOpen(true) });
+      } else {
+        errorMessage = error.response?.data?.message || error.message;
         toast.error(errorMessage, { position: 'bottom-right', autoClose: 5000 });
       }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

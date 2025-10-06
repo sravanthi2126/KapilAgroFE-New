@@ -1,3 +1,4 @@
+// OrderConfirmation.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Package, Download, CheckCircle } from 'lucide-react';
@@ -23,7 +24,8 @@ const OrderConfirmation = () => {
   };
 
   const getPaymentStatusColor = () => {
-    switch (orderDetails?.paymentStatus?.toLowerCase()) {
+    switch (orderDetails?.orderStatus?.toLowerCase()) {
+      case 'placed':
       case 'success':
         return '#16a34a';
       case 'pending':
@@ -36,7 +38,8 @@ const OrderConfirmation = () => {
   };
 
   const getPaymentStatusBg = () => {
-    switch (orderDetails?.paymentStatus?.toLowerCase()) {
+    switch (orderDetails?.orderStatus?.toLowerCase()) {
+      case 'placed':
       case 'success':
         return 'rgba(22, 163, 74, 0.1)';
       case 'pending':
@@ -107,34 +110,38 @@ const OrderConfirmation = () => {
         }
       } catch (error) {
         console.error('Error fetching order details:', error);
-        if (error.response?.status === 400 && error.response?.data?.message.includes('Order ID is missing or invalid')) {
-          showError('Invalid Order ID. Please check your order history or contact support.', {
-            autoClose: false,
-            onClick: () => navigate('/orders'),
-          });
-        } else {
-          showError('Error fetching order details. Please try again.', { autoClose: false });
-        }
+        showError('Error fetching order details. Please try again.', { autoClose: false });
       } finally {
         setLoading(false);
       }
     };
 
-    // Get orderId from location.state or URL query
-    const urlParams = new URLSearchParams(location.search);
-    const orderIdFromQuery = urlParams.get('orderId');
-    const orderIdFromState = location.state?.orderDetails?.orderId || location.state?.orderId;
+    const fetchInvoiceDetails = async (orderId) => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await apiClient.get(`/user/invoice/INV-${orderId}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
 
-    const orderId = orderIdFromState || orderIdFromQuery;
+        if (response.status === 200 && response.data.status === 'success') {
+          setInvoiceDetails(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error auto-fetching invoice:', error);
+        showError('Failed to load full order details. Products may not display.', { autoClose: false });
+      }
+    };
 
+    const orderId = location.state?.orderId || new URLSearchParams(location.search).get('orderId');
     if (orderId) {
       console.log('Fetching order details for orderId:', orderId);
       fetchOrderDetails(orderId);
+      fetchInvoiceDetails(orderId); // Auto-fetch invoice
     } else {
       setLoading(false);
       showError('Order ID not found. Please check your order history.', { autoClose: false });
     }
-  }, [location]);
+  }, [location, navigate]);
 
   if (loading) {
     return (
@@ -157,10 +164,7 @@ const OrderConfirmation = () => {
           <div className="order-details-card">
             <div className="card-content">
               <p>Order not found. Please check your order history.</p>
-              <button
-                onClick={() => navigate('/')}
-                className="action-btn"
-              >
+              <button onClick={() => navigate('/')} className="action-btn">
                 Go to Home
               </button>
             </div>
@@ -174,7 +178,6 @@ const OrderConfirmation = () => {
     <div className="order-confirmation-page">
       <div className="order-confirmation-container">
         <div className="order-details-card">
-          {/* Header */}
           <div className="card-header">
             <div className="header-icon">
               <Package size={24} />
@@ -188,72 +191,56 @@ const OrderConfirmation = () => {
             </div>
           </div>
 
-          {/* Content */}
           <div className="card-content">
             {orderDetails.razorpayOrderId && (
               <div className="detail-row">
                 <span className="detail-label">Razorpay Order ID</span>
-                <span className="detail-value detail-value-small">
-                  {orderDetails.razorpayOrderId}
-                </span>
+                <span className="detail-value detail-value-small">{orderDetails.razorpayOrderId}</span>
               </div>
             )}
 
             {orderDetails.razorpayPaymentId && (
               <div className="detail-row">
                 <span className="detail-label">Payment ID</span>
-                <span className="detail-value detail-value-small">
-                  {orderDetails.razorpayPaymentId}
-                </span>
+                <span className="detail-value detail-value-small">{orderDetails.razorpayPaymentId}</span>
               </div>
             )}
 
             <div className="detail-row">
               <span className="detail-label">Order ID</span>
-              <span className="detail-value detail-value-small">
-                {orderDetails.orderId}
-              </span>
+              <span className="detail-value detail-value-small">{orderDetails.orderId}</span>
             </div>
 
             <div className="detail-row">
               <span className="detail-label">Invoice ID</span>
-              <span className="detail-value detail-value-small">
-                {invoiceDetails?.invoiceId || `INV-${orderDetails.orderId}`}
-              </span>
+              <span className="detail-value detail-value-small">{invoiceDetails?.invoiceId || `INV-${orderDetails.orderId}`}</span>
             </div>
 
             <div className="detail-row">
               <span className="detail-label">Order Date</span>
-              <span className="detail-value">
-                {formatDate(orderDetails.orderDate || invoiceDetails?.createdAt || new Date())}
-              </span>
+              <span className="detail-value">{formatDate(orderDetails.placedAt || invoiceDetails?.createdAt || new Date())}</span>
             </div>
 
             <div className="detail-row">
               <span className="detail-label">Payment Method</span>
-              <span className="detail-value">
-                {orderDetails.paymentMethod || 'Online Payment'}
-              </span>
+              <span className="detail-value">{orderDetails.paymentMethod || 'Online Payment'}</span>
             </div>
 
             <div className="detail-row">
               <span className="detail-label">Payment Status</span>
               <span
                 className="payment-status-badge"
-                style={{
-                  color: getPaymentStatusColor(),
-                  backgroundColor: getPaymentStatusBg(),
-                }}
+                style={{ color: getPaymentStatusColor(), backgroundColor: getPaymentStatusBg() }}
               >
-                {orderDetails.paymentStatus || 'Pending'}
+                {orderDetails.orderStatus || 'Pending'}
               </span>
             </div>
 
             {/* Product List */}
-            {invoiceDetails?.products && (
+            {(orderDetails.orderItems || invoiceDetails?.products) && (
               <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                 <span className="detail-label" style={{ marginBottom: '1rem' }}>Items</span>
-                {invoiceDetails.products.map((product) => {
+                {(orderDetails.orderItems || invoiceDetails?.products || []).map((product) => {
                   const isPlant = product.productName.toLowerCase().includes('plant');
                   const unitMeasurement = product.unitMeasurement || (isPlant ? '1 Plant' : null);
                   return (
@@ -269,12 +256,10 @@ const OrderConfirmation = () => {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <img
-                          src={product.imageUrl}
+                          src={product.imageUrl || '/images/placeholder.jpg'}
                           alt={product.productName}
                           style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }}
-                          onError={(e) => {
-                            e.target.src = '/images/placeholder.jpg';
-                          }}
+                          onError={(e) => (e.target.src = '/images/placeholder.jpg')}
                         />
                         <div>
                           <span className="detail-value">{product.productName}</span>
@@ -336,7 +321,6 @@ const OrderConfirmation = () => {
             )}
           </div>
 
-          {/* Action Buttons */}
           <div className="action-buttons">
             <button onClick={handleDownloadInvoice} className="action-btn">
               <Download size={20} />
