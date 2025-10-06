@@ -85,6 +85,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   };
 
   const handleRazorpayPayment = async (orderData) => {
+    console.log('orderData in Razorpay options:', orderData);
     try {
       await loadRazorpayScript();
       return new Promise((resolve, reject) => {
@@ -100,7 +101,9 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
               razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature || 'dummy_signature',
-              orderId: orderData.orderId, // Temp orderId
+ // Temp orderId
+              orderId: orderData.tempOrderId,
+
             });
           },
           prefill: {
@@ -123,6 +126,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
   const verifyPayment = async (paymentData) => {
     try {
+      console.log('Verifying payment with data:', paymentData);
       const token = localStorage.getItem('token');
       const payload = {
         razorpayOrderId: paymentData.razorpayOrderId,
@@ -137,13 +141,46 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       });
 
       if (response.data.status === 'success') {
-        const permanentOrderId = response.data.data.orderId; // Backend returns permanent orderId
+
+
         console.log('Permanent orderId from payment/success:', permanentOrderId);
+        
 
         // Fetch order details with permanent orderId
-        const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        });
+
+        let orderDetails = null;
+        try {
+          const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (orderResponse.data.status === 'success') {
+            orderDetails = orderResponse.data.data;
+          }
+        } catch (fetchError) {
+          console.error('Error fetching order with orderId:', permanentOrderId, fetchError);
+          // Fallback: Fetch user's latest order
+          const ordersResponse = await apiClient.get('/user/orders', {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (ordersResponse.data.status === 'success' && ordersResponse.data.data.length > 0) {
+            // Sort by placedAt to get the latest order
+            const latestOrder = ordersResponse.data.data.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))[0];
+            permanentOrderId = latestOrder.orderId;
+            orderDetails = latestOrder;
+            console.log('Fallback to latest orderId:', permanentOrderId);
+          } else {
+            throw new Error('No orders found for user');
+          }
+        }
+
 
         if (orderResponse.data.status === 'success') {
           return {
@@ -470,10 +507,10 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                     ? 'Calculating...'
                     : currentOrderDetails.shippingcharges === undefined ||
                       isNaN(parseFloat(currentOrderDetails.shippingcharges))
-                    ? 'Error: Unable to load shipping charges'
-                    : parseFloat(currentOrderDetails.shippingcharges) === 0
-                    ? 'FREE'
-                    : `₹${parseFloat(currentOrderDetails.shippingcharges).toFixed(2)}`}
+                      ? 'Error: Unable to load shipping charges'
+                      : parseFloat(currentOrderDetails.shippingcharges) === 0
+                        ? 'FREE'
+                        : `₹${parseFloat(currentOrderDetails.shippingcharges).toFixed(2)}`}
                 </span>
               </div>
               {parseFloat(currentOrderDetails.totalTaxAmount || 0) > 0 && (
