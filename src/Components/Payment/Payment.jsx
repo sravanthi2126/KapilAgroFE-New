@@ -124,6 +124,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
               razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature || 'dummy_signature',
+ // Temp orderId
               orderId: orderData.tempOrderId,
 
             });
@@ -167,14 +168,13 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       });
 
       if (response.data.status === 'success') {
-        // Check if backend returns permanent orderId
-        console.log('Payment verification successful:', response);
-        console.log('Response from payment/success:', response.data);
-        let permanentOrderId = response.data.data?.orderId || paymentData.orderId;
+
+
         console.log('Permanent orderId from payment/success:', permanentOrderId);
         
 
         // Fetch order details with permanent orderId
+
         let orderDetails = null;
         try {
           const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
@@ -208,7 +208,8 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           }
         }
 
-        if (orderDetails) {
+
+        if (orderResponse.data.status === 'success') {
           return {
             success: true,
             message: response.data.message,
