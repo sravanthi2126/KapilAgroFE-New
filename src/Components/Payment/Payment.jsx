@@ -124,9 +124,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
               razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature || 'dummy_signature',
- // Temp orderId
               orderId: orderData.tempOrderId,
-
             });
           },
           prefill: {
@@ -168,13 +166,15 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       });
 
       if (response.data.status === 'success') {
-
+        // Extract permanentOrderId from response
+        const permanentOrderId = response.data.orderId || response.data.data?.orderId;
+        if (!permanentOrderId) {
+          throw new Error('Permanent order ID not found in response');
+        }
 
         console.log('Permanent orderId from payment/success:', permanentOrderId);
-        
 
         // Fetch order details with permanent orderId
-
         let orderDetails = null;
         try {
           const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
@@ -208,8 +208,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           }
         }
 
-
-        if (orderResponse.data.status === 'success') {
+        if (orderDetails) {
           return {
             success: true,
             message: response.data.message,
@@ -365,7 +364,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         toast.error(errorMessage, {
           position: 'bottom-right',
           autoClose: 5000,
-          onClick: () => navigate('/order-confirmation'), // Redirect to order confirmation if possible
+          onClick: () => navigate('/order-confirmation'),
         });
       } else if (error.response?.status === 401 || error.response?.status === 403) {
         errorMessage = 'Session expired. Please log in again';
