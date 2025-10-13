@@ -151,150 +151,155 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
     }
   };
 
-  const verifyPayment = async (paymentData) => {
-    try {
-      console.log('Verifying payment with data:', paymentData);
-      const token = localStorage.getItem('token');
-      const payload = {
-        razorpayOrderId: paymentData.razorpayOrderId,
-        razorpayPaymentId: paymentData.razorpayPaymentId,
-        razorpaySignature: paymentData.razorpaySignature,
-        amount: paymentData.amount.toString(), // Amount in rupees as string
-        orderId: paymentData.orderId,
-      };
-      console.log('Payload sent to backend:', payload); // Log for debugging
+ const verifyPayment = async (paymentData) => {
+  try {
+    console.log('Verifying payment with data:', paymentData);
+    const token = localStorage.getItem('token');
+    const payload = {
+      razorpayOrderId: paymentData.razorpayOrderId,
+      razorpayPaymentId: paymentData.razorpayPaymentId,
+      razorpaySignature: paymentData.razorpaySignature,
+      amount: paymentData.amount.toString(), // Amount in rupees as string
+      orderId: paymentData.orderId,
+    };
+    console.log('Payload sent to backend:', payload); // Log for debugging
 
-      // Call payment success endpoint
-      const response = await apiClient.post('/user/orders/payment/success', payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.data.status === 'success') {
-        const permanentOrderId = response.data.orderId;
-        if (!permanentOrderId) {
-          throw new Error('Permanent order ID not found in response');
-        }
-
-        console.log('Permanent orderId from payment/success:', permanentOrderId);
-
-        // Fetch order details with permanent orderId
-        let orderDetails = null;
-        try {
-          const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-
-          if (orderResponse.data.status === 'success') {
-            orderDetails = orderResponse.data.data;
-          }
-        } catch (fetchError) {
-          console.error('Error fetching order with orderId:', permanentOrderId, fetchError);
-          // Fallback: Fetch user's latest order
-          const ordersResponse = await apiClient.get('/user/orders', {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-
-          if (ordersResponse.data.status === 'success' && ordersResponse.data.data.length > 0) {
-            const latestOrder = ordersResponse.data.data.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))[0];
-            permanentOrderId = latestOrder.orderId;
-            orderDetails = latestOrder;
-            console.log('Fallback to latest orderId:', permanentOrderId);
-          } else {
-            throw new Error('No orders found for user');
-          }
-        }
-
-        if (orderDetails) {
-          return {
-            success: true,
-            message: response.data.message,
-            shipway_status: response.data.shipway_status || 'success',
-            orderDetails: {
-              orderId: orderDetails.orderId,
-              razorpayOrderId: paymentData.razorpayOrderId,
-              razorpayPaymentId: paymentData.razorpayPaymentId,
-              totalAmount: orderDetails.totalAmount,
-              paymentMethod: orderDetails.paymentMethod || 'Online Payment (Razorpay)',
-              paymentStatus: orderDetails.paymentStatus || 'Success',
-              orderDate: orderDetails.orderDate || new Date().toISOString(),
-              shippingcharges: orderDetails.shippingAmount,
-              subtotalAmount: orderDetails.subtotalAmount,
-              originalAmount: orderDetails.originalAmount,
-              productDiscountAmount: orderDetails.productDiscountAmount,
-              orderDiscountAmount: orderDetails.orderDiscountAmount,
-              totalTaxAmount: orderDetails.totalTaxAmount,
-            },
-          };
-        } else {
-          throw new Error('Failed to fetch updated order details');
-        }
-      } else {
-        throw new Error(response.data?.message || 'Payment verification failed');
-      }
-    } catch (error) {
-      console.error('Payment verification failed:', {
-        message: error.message,
-        response: error.response?.data,
-      });
-      throw error;
-    }
-  };
-
-  const navigateToOrderConfirmation = (orderData, successMessage) => {
-    console.log('Navigating to order confirmation with orderId:', orderData.orderDetails?.orderId || orderData.orderId);
-    setCart([]);
-    toast.success(successMessage, {
-      position: 'bottom-right',
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
+    // Call payment success endpoint
+    const response = await apiClient.post('/user/orders/payment/success', payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
     });
 
-    const orderId = orderData.orderDetails?.orderId || orderData.orderId;
-    if (!orderId) {
-      console.error('No orderId found for navigation');
-      toast.error('Order ID not found. Please contact support.', {
-        position: 'bottom-right',
-        autoClose: 5000,
-      });
-      return;
-    }
+    if (response.data.status === 'success') {
+      const permanentOrderId = response.data.data.orderId; // Updated to access nested orderId
+      const invoiceId = response.data.data.invoiceId; // Extract invoiceId from response
+      if (!permanentOrderId) {
+        throw new Error('Permanent order ID not found in response');
+      }
 
-    try {
-      navigate('/order-confirmation', {
-        state: {
-          orderId: orderId,
-          cartItems,
-          orderDetails: orderData.orderDetails || orderData,
-          shippingAddress,
-          billingAddress,
-          orderSummary: {
-            subtotal: parseFloat(currentOrderDetails.subtotalAmount || 0),
-            originalAmount: parseFloat(currentOrderDetails.originalAmount || 0),
-            productDiscountAmount: parseFloat(currentOrderDetails.productDiscountAmount || 0),
-            orderDiscountAmount: parseFloat(currentOrderDetails.orderDiscountAmount || 0),
-            shippingCharges: parseFloat(currentOrderDetails.shippingcharges || 0),
-            taxes: parseFloat(currentOrderDetails.totalTaxAmount || 0),
-            total: parseFloat(currentOrderDetails.totalAmount || 0),
+      console.log('Permanent orderId from payment/success:', permanentOrderId);
+      console.log('InvoiceId from payment/success:', invoiceId);
+
+      // Fetch order details with permanent orderId
+      let orderDetails = null;
+      try {
+        const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
-        },
-      });
-    } catch (navError) {
-      console.error('Navigation error:', navError);
-      window.location.href = '/order-confirmation';
+        });
+
+        if (orderResponse.data.status === 'success') {
+          orderDetails = orderResponse.data.data;
+        }
+      } catch (fetchError) {
+        console.error('Error fetching order with orderId:', permanentOrderId, fetchError);
+        // Fallback: Fetch user's latest order
+        const ordersResponse = await apiClient.get('/user/orders', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (ordersResponse.data.status === 'success' && ordersResponse.data.data.length > 0) {
+          const latestOrder = ordersResponse.data.data.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))[0];
+          permanentOrderId = latestOrder.orderId;
+          orderDetails = latestOrder;
+          console.log('Fallback to latest orderId:', permanentOrderId);
+        } else {
+          throw new Error('No orders found for user');
+        }
+      }
+
+      if (orderDetails) {
+        return {
+          success: true,
+          message: response.data.message,
+          shipway_status: response.data.shipway_status || 'success',
+          orderDetails: {
+            orderId: orderDetails.orderId,
+            invoiceId: invoiceId, // Add invoiceId to orderDetails
+            razorpayOrderId: paymentData.razorpayOrderId,
+            razorpayPaymentId: paymentData.razorpayPaymentId,
+            totalAmount: orderDetails.totalAmount,
+            paymentMethod: orderDetails.paymentMethod || 'Online Payment (Razorpay)',
+            paymentStatus: orderDetails.paymentStatus || 'Success',
+            orderDate: orderDetails.orderDate || new Date().toISOString(),
+            shippingcharges: orderDetails.shippingAmount,
+            subtotalAmount: orderDetails.subtotalAmount,
+            originalAmount: orderDetails.originalAmount,
+            productDiscountAmount: orderDetails.productDiscountAmount,
+            orderDiscountAmount: orderDetails.orderDiscountAmount,
+            totalTaxAmount: orderDetails.totalTaxAmount,
+          },
+        };
+      } else {
+        throw new Error('Failed to fetch updated order details');
+      }
+    } else {
+      throw new Error(response.data?.message || 'Payment verification failed');
     }
-  };
+  } catch (error) {
+    console.error('Payment verification failed:', {
+      message: error.message,
+      response: error.response?.data,
+    });
+    throw error;
+  }
+};
+
+ const navigateToOrderConfirmation = (orderData, successMessage) => {
+  console.log('Navigating to order confirmation with orderId:', orderData.orderDetails?.orderId || orderData.orderId);
+  setCart([]);
+  toast.success(successMessage, {
+    position: 'bottom-right',
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+  });
+
+  const orderId = orderData.orderDetails?.orderId || orderData.orderId;
+  const invoiceId = orderData.orderDetails?.invoiceId; // Extract invoiceId
+  if (!orderId) {
+    console.error('No orderId found for navigation');
+    toast.error('Order ID not found. Please contact support.', {
+      position: 'bottom-right',
+      autoClose: 5000,
+    });
+    return;
+  }
+
+  try {
+    navigate('/order-confirmation', {
+      state: {
+        orderId: orderId,
+        invoiceId: invoiceId, // Pass invoiceId to OrderConfirmation
+        cartItems,
+        orderDetails: orderData.orderDetails || orderData,
+        shippingAddress,
+        billingAddress,
+        orderSummary: {
+          subtotal: parseFloat(currentOrderDetails.subtotalAmount || 0),
+          originalAmount: parseFloat(currentOrderDetails.originalAmount || 0),
+          productDiscountAmount: parseFloat(currentOrderDetails.productDiscountAmount || 0),
+          orderDiscountAmount: parseFloat(currentOrderDetails.orderDiscountAmount || 0),
+          shippingCharges: parseFloat(currentOrderDetails.shippingcharges || 0),
+          taxes: parseFloat(currentOrderDetails.totalTaxAmount || 0),
+          total: parseFloat(currentOrderDetails.totalAmount || 0),
+        },
+      },
+    });
+  } catch (navError) {
+    console.error('Navigation error:', navError);
+    window.location.href = '/order-confirmation';
+  }
+};
 
   const handlePlaceOrder = async () => {
     if (!currentOrderDetails) {
