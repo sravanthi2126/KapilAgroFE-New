@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Plus, Minus, Trash2, X, ShoppingBag, Package } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { apiClient } from '../../services/authService';
+import { apiClient, validateAndRefreshToken } from '../../services/authService';
 import './Cart.css';
 
 const Cart = ({ cart, setCart, setIsLoginOpen }) => {
@@ -17,8 +17,8 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const isValid = await validateAndRefreshToken();
+      if (!isValid) {
         setError('Please log in to view cart');
         if (isCartOpen) {
           toast.info('Please log in to view your cart', {
@@ -32,16 +32,14 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
       const response = await apiClient.get('/user/cart/usercart');
       if (response.status === 200 && response.data.status === 'success') {
         const detailedCart = response.data.data.map((item) => {
-          // Calculate discount details
           const discountValue = item.price > item.afterDiscountPrice 
             ? item.price - item.afterDiscountPrice 
             : 0;
-          const isPercentageDiscount = discountValue > 0 ? true : false;
+          const isPercentageDiscount = discountValue > 0;
           const discountPercentage = discountValue > 0 
             ? ((discountValue / item.price) * 100).toFixed(0) 
             : 0;
 
-          // Determine if item is a plant
           const isPlant = item.category.toLowerCase() === 'plants' || 
                          item.productName.toLowerCase().includes('plant');
           const unitMeasurement = item.unitMeasurement || (isPlant ? '1 Plant' : null);
@@ -58,7 +56,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
             discount_value: discountValue,
             is_percentage_discount: isPercentageDiscount,
             discount_percentage: discountPercentage,
-            available_sizes: item.availableSizes || [], // New field for available sizes
+            available_sizes: item.availableSizes || [],
           };
         });
         setCart(detailedCart);
@@ -70,15 +68,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
     } catch (err) {
       console.error('Cart fetch error:', err);
       let errorMessage = 'Failed to fetch cart items';
-      if (err.response?.status === 403) {
-        errorMessage = 'Please log in to view cart';
-        if (isCartOpen) {
-          toast.info(errorMessage, {
-            autoClose: 5000,
-            onClick: () => setIsLoginOpen(true),
-          });
-        }
-      } else if (err.response?.status === 401) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
         errorMessage = 'Session expired. Please log in again';
         localStorage.removeItem('token');
         if (isCartOpen) {
@@ -117,9 +107,15 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
         fetchCart();
       }
     };
+    const handleOrderPlaced = () => {
+      setCart([]); // Clear cart on successful order
+      fetchCart(); // Refetch to ensure consistency
+    };
     window.addEventListener('userLoggedIn', handleLoginEvent);
+    window.addEventListener('orderPlaced', handleOrderPlaced);
     return () => {
       window.removeEventListener('userLoggedIn', handleLoginEvent);
+      window.removeEventListener('orderPlaced', handleOrderPlaced);
     };
   }, [isCartOpen]);
 
@@ -132,8 +128,8 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
 
     setUpdatingItems((prev) => new Set(prev).add(cartItemId));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const isValid = await validateAndRefreshToken();
+      if (!isValid) {
         toast.info('Please log in to update cart', {
           autoClose: 5000,
           onClick: () => setIsLoginOpen(true),
@@ -142,9 +138,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
       }
 
       const payload = { quantity: parseInt(quantity) };
-      const response = await apiClient.put(`/user/cart/update/${cartItemId}`, payload, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
+      const response = await apiClient.put(`/user/cart/update/${cartItemId}`, payload);
 
       if (response.status === 200 && response.data.status === 'success') {
         setCart((prev) =>
@@ -172,10 +166,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
     } catch (err) {
       console.error('Update quantity error:', err);
       let errorMessage = 'Failed to update cart item';
-      if (err.response?.status === 403) {
-        errorMessage = 'Please log in to update cart';
-        toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
-      } else if (err.response?.status === 401) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
         errorMessage = 'Session expired. Please log in again';
         localStorage.removeItem('token');
         toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
@@ -199,8 +190,8 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
   const removeItem = async (cartItemId) => {
     setUpdatingItems((prev) => new Set(prev).add(cartItemId));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const isValid = await validateAndRefreshToken();
+      if (!isValid) {
         toast.info('Please log in to remove cart item', {
           autoClose: 5000,
           onClick: () => setIsLoginOpen(true),
@@ -208,16 +199,12 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
         return;
       }
 
-      const response = await apiClient.delete(`/user/cart/${cartItemId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await apiClient.delete(`/user/cart/${cartItemId}`);
 
       if (response.status === 200 && response.data.status === 'success') {
         setCart((prev) => prev.filter((item) => item.cartItemId !== cartItemId));
         toast.success('Item removed from cart', { autoClose: false });
-        const cartResponse = await apiClient.get('/user/cart/usercart', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const cartResponse = await apiClient.get('/user/cart/usercart');
         if (cartResponse.data.data.length === 0) {
           setCart([]);
         }
@@ -228,10 +215,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
     } catch (err) {
       console.error('Remove item error:', err);
       let errorMessage = 'Failed to remove cart item';
-      if (err.response?.status === 403) {
-        errorMessage = 'Please log in to remove cart item';
-        toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
-      } else if (err.response?.status === 401) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
         errorMessage = 'Session expired. Please log in again';
         localStorage.removeItem('token');
         toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
@@ -253,8 +237,8 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
   const updatePlantAge = async (cartItemId, productId, newPlantAge) => {
     setUpdatingItems((prev) => new Set(prev).add(cartItemId));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const isValid = await validateAndRefreshToken();
+      if (!isValid) {
         toast.info('Please log in to update cart', {
           autoClose: 5000,
           onClick: () => setIsLoginOpen(true),
@@ -262,9 +246,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
         return;
       }
 
-      const productResponse = await apiClient.get(`/user/products/get/${productId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const productResponse = await apiClient.get(`/user/products/get/${productId}`);
 
       if (productResponse.status !== 200 || productResponse.data.status !== 'success') {
         throw new Error('Failed to fetch product details');
@@ -302,9 +284,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
         isPercentageDiscount: isPercentageDiscount,
       };
 
-      const response = await apiClient.put(`/user/cart/updatePlantAge/${cartItemId}`, payload, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
+      const response = await apiClient.put(`/user/cart/updatePlantAge/${cartItemId}`, payload);
 
       if (response.status === 200 && response.data.status === 'success') {
         setCart((prev) =>
@@ -327,10 +307,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
     } catch (err) {
       console.error('Update plant age error:', err);
       let errorMessage = 'Failed to update plant age';
-      if (err.response?.status === 403) {
-        errorMessage = 'Please log in to update cart';
-        toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
-      } else if (err.response?.status === 401) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
         errorMessage = 'Session expired. Please log in again';
         localStorage.removeItem('token');
         toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
@@ -352,8 +329,8 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
   const updateSize = async (cartItemId, productId, newSize) => {
     setUpdatingItems((prev) => new Set(prev).add(cartItemId));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const isValid = await validateAndRefreshToken();
+      if (!isValid) {
         toast.info('Please log in to update cart', {
           autoClose: 5000,
           onClick: () => setIsLoginOpen(true),
@@ -361,9 +338,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
         return;
       }
 
-      const productResponse = await apiClient.get(`/user/products/get/${productId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const productResponse = await apiClient.get(`/user/products/get/${productId}`);
 
       if (productResponse.status !== 200 || productResponse.data.status !== 'success') {
         throw new Error('Failed to fetch product details');
@@ -389,9 +364,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
         isPercentageDiscount: isPercentageDiscount,
       };
 
-      const response = await apiClient.put(`/user/cart/updateSize/${cartItemId}`, payload, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
+      const response = await apiClient.put(`/user/cart/updateSize/${cartItemId}`, payload);
 
       if (response.status === 200 && response.data.status === 'success') {
         setCart((prev) =>
@@ -414,10 +387,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
     } catch (err) {
       console.error('Update size error:', err);
       let errorMessage = 'Failed to update size';
-      if (err.response?.status === 403) {
-        errorMessage = 'Please log in to update cart';
-        toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
-      } else if (err.response?.status === 401) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
         errorMessage = 'Session expired. Please log in again';
         localStorage.removeItem('token');
         toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
@@ -436,9 +406,9 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
     }
   };
 
-  const handleProceed = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+  const handleProceed = async () => {
+    const isValid = await validateAndRefreshToken();
+    if (!isValid) {
       toast.info('Please log in to proceed to address', {
         autoClose: 5000,
         onClick: () => setIsLoginOpen(true),

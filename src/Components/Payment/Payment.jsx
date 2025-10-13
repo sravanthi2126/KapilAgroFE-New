@@ -114,17 +114,23 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       return new Promise((resolve, reject) => {
         const options = {
           key: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_OCmyT47D47k8rb',
-          amount: Math.round(parseFloat(orderData.totalAmount) * 100),
+          amount: Math.round(parseFloat(orderData.totalAmount) * 100), // Amount in paise
           currency: 'INR',
           name: 'Kapil Agro',
           description: 'Purchase from Kapil Agro',
           order_id: orderData.razorpayOrderId,
           handler: function (response) {
+            console.log('Razorpay response:', response); // Log for debugging
+            if (!response.razorpay_signature) {
+              reject(new Error('Razorpay signature not received. Payment may have failed.'));
+              return;
+            }
             resolve({
-              razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
+              razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature || 'dummy_signature',
+              razorpaySignature: response.razorpay_signature,
               orderId: orderData.tempOrderId,
+              amount: parseFloat(orderData.totalAmount) // Amount in rupees
             });
           },
           prefill: {
@@ -153,9 +159,10 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         razorpayOrderId: paymentData.razorpayOrderId,
         razorpayPaymentId: paymentData.razorpayPaymentId,
         razorpaySignature: paymentData.razorpaySignature,
-        amount: paymentData.amount.toString(),
-        orderId: paymentData.orderId, // Temp orderId
+        amount: paymentData.amount.toString(), // Amount in rupees as string
+        orderId: paymentData.orderId,
       };
+      console.log('Payload sent to backend:', payload); // Log for debugging
 
       // Call payment success endpoint
       const response = await apiClient.post('/user/orders/payment/success', payload, {
@@ -166,8 +173,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       });
 
       if (response.data.status === 'success') {
-        // Extract permanentOrderId from response
-        const permanentOrderId = response.data.orderId || response.data.data?.orderId;
+        const permanentOrderId = response.data.orderId;
         if (!permanentOrderId) {
           throw new Error('Permanent order ID not found in response');
         }
@@ -198,7 +204,6 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           });
 
           if (ordersResponse.data.status === 'success' && ordersResponse.data.data.length > 0) {
-            // Sort by placedAt to get the latest order
             const latestOrder = ordersResponse.data.data.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))[0];
             permanentOrderId = latestOrder.orderId;
             orderDetails = latestOrder;
@@ -214,7 +219,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             message: response.data.message,
             shipway_status: response.data.shipway_status || 'success',
             orderDetails: {
-              orderId: orderDetails.orderId, // Permanent orderId
+              orderId: orderDetails.orderId,
               razorpayOrderId: paymentData.razorpayOrderId,
               razorpayPaymentId: paymentData.razorpayPaymentId,
               totalAmount: orderDetails.totalAmount,
@@ -269,7 +274,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
     try {
       navigate('/order-confirmation', {
         state: {
-          orderId: orderId, // Permanent orderId
+          orderId: orderId,
           cartItems,
           orderDetails: orderData.orderDetails || orderData,
           shippingAddress,
@@ -323,8 +328,8 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           razorpayOrderId: paymentData.razorpayOrderId,
           razorpayPaymentId: paymentData.razorpayPaymentId,
           razorpaySignature: paymentData.razorpaySignature,
-          amount: parseFloat(currentOrderDetails.totalAmount),
-          orderId: paymentData.orderId, // Temp orderId
+          amount: paymentData.amount,
+          orderId: paymentData.orderId,
         });
 
         if (verificationResult.success) {
@@ -356,11 +361,11 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           position: 'bottom-right',
           autoClose: 5000,
         });
-      } else if (error.message === 'Razorpay SDK not loaded. Please refresh the page and try again.') {
+      } else if (error.message === 'Razorpay SDK failed to load. Please refresh and try again.') {
         errorMessage = error.message;
         toast.error(errorMessage, { position: 'bottom-right', autoClose: 5000 });
       } else if (error.response?.status === 400) {
-        errorMessage = 'Invalid Order ID. Please check your order history or try again.';
+        errorMessage = 'Invalid Order ID or payment details. Please check your order history or try again.';
         toast.error(errorMessage, {
           position: 'bottom-right',
           autoClose: 5000,
