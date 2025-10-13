@@ -33,9 +33,15 @@ export const isTokenExpired = (token) => {
 };
 
 // Modified isAuthenticated function
+// In authService.js - Fix the isAuthenticated function
 export const isAuthenticated = () => {
-  const token = localStorage.getItem('token');
-  return token && !isTokenExpired(token);
+  try {
+    const token = localStorage.getItem('token');
+    return token && !isTokenExpired(token);
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    return false;
+  }
 };
 
 // Function to refresh access token
@@ -269,3 +275,27 @@ export const clearAuth = () => {
 
 // Export apiClient for direct use
 export { apiClient, setAuthToken };
+
+
+// ------------
+// Add this function to authService.js
+export const validateAndRefreshToken = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    return false;
+  }
+  
+  if (isTokenExpired(token)) {
+    try {
+      await refreshAccessToken();
+      return true;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      clearAuth();
+      return false;
+    }
+  }
+  
+  return true;
+};
