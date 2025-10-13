@@ -1,0 +1,253 @@
+.orders-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.orders-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: #333;
+}
+
+.orders-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.order-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.order-id {
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.order-icon {
+  color: #4CAF50;
+}
+
+.order-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.order-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.order-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+}
+
+.detail-icon {
+  color: #4CAF50;
+}
+
+.order-footer {
+  margin-top: 1rem;
+  text-align: right;
+}
+
+.order-view-details {
+  color: #4CAF50;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
+.order-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.order-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 900px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 2rem;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.order-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.order-modal-header h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.order-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.order-modal-close:hover {
+  color: #333;
+}
+
+.order-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.order-info-section, .order-address-section {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.order-info-section h3, .order-address-section h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #4CAF50;
+}
+
+.order-info-section p, .order-address-section p {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.order-items-section {
+  grid-column: span 2;
+}
+
+.order-item {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.order-item-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.order-item-details {
+  flex: 1;
+}
+
+.order-item-details h4 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.order-item-details p {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.orders-loading, .order-details-loading, .orders-empty, .order-details-error {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .orders-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .order-items-section {
+    grid-column: span 1;
+  }
+}
+
+.download-invoice-button {
+  background-color: #4CAF50; /* Green background to match the theme */
+  color: white; /* White text for contrast */
+  border: none;
+  padding: 0.75rem 1.5rem; /* Comfortable padding */
+  border-radius: 8px; /* Rounded corners to match other elements */
+  font-size: 1rem; /* Readable font size */
+  font-weight: 600; /* Bold text for emphasis */
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth transitions */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  width: 100%; /* Full width for mobile responsiveness */
+  margin-top: 1rem; /* Space from the last order item */
+  text-align: center;
+}
+
+.download-invoice-button:hover {
+  background-color: #45a049; /* Darker green on hover */
+  transform: translateY(-2px); /* Slight lift effect */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}
+
+.download-invoice-button:active {
+  transform: translateY(0); /* Reset lift on click */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Reset shadow */
+}
+
+.no-invoice-message {
+  color: #F44336; /* Red color to indicate no invoice */
+  font-style: italic;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .download-invoice-button {
+    padding: 0.5rem 1rem; /* Slightly smaller padding on mobile */
+  }
+}
