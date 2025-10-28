@@ -302,35 +302,40 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
            variant.originalAmount > variant.afterDiscountAmount;
   };
 
-  const getCurrentPrice = (variant, plantAge) => {
-    if (!variant) return { current: 0, original: 0 };
+ const getCurrentPrice = (variant, plantAge) => {
+  if (!variant) return { current: 0, original: 0 };
+  
+  if (currentProduct?.isPlant && plantAge) {
+    // If your API provides plant age specific pricing in variants
+    const ageSpecificVariant = currentProduct.variants.find(v => 
+      v.plantAge === plantAge || v.variantName.includes(`${plantAge} Year`)
+    );
     
-    if (currentProduct?.isPlant && plantAge) {
-      // For plants, calculate price based on age
-      const basePrice = variant.originalAmount || variant.afterDiscountAmount;
-      let ageMultiplier = 1;
-      switch (plantAge) {
-        case '2':
-          ageMultiplier = 1.5;
-          break;
-        case '3':
-          ageMultiplier = 2;
-          break;
-        default:
-          ageMultiplier = 1;
-      }
-      const calculatedPrice = basePrice * ageMultiplier;
+    if (ageSpecificVariant) {
       return {
-        current: calculatedPrice,
-        original: hasDiscount(variant) ? calculatedPrice / (1 - (calculateDiscount(variant) || 0) / 100) : calculatedPrice
+        current: ageSpecificVariant.afterDiscountAmount || ageSpecificVariant.originalAmount,
+        original: ageSpecificVariant.originalAmount
       };
     }
     
+    // Fallback to multiplier calculation
+    const basePrice = variant.afterDiscountAmount || variant.originalAmount;
+    const ageMultiplier = { '1': 1, '2': 1.5, '3': 2 }[plantAge] || 1;
+    const calculatedPrice = basePrice * ageMultiplier;
+    
     return {
-      current: variant.afterDiscountAmount || variant.originalAmount,
-      original: variant.originalAmount
+      current: calculatedPrice,
+      original: hasDiscount(variant) 
+        ? calculatedPrice / (1 - (calculateDiscount(variant) || 0) / 100)
+        : calculatedPrice
     };
+  }
+  
+  return {
+    current: variant.afterDiscountAmount || variant.originalAmount,
+    original: variant.originalAmount
   };
+};
 
   if (loading) {
     return (
@@ -441,23 +446,26 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
               </p>
 
               {/* Plant Age Selector - Only for plants */}
-              {currentProduct.isPlant && (
-                <div className="plant-age-section">
-                  <h3 className="variant-title">Choose Plant Age:</h3>
-                  <div className="plant-age-options">
-                    {['1', '2', '3'].map((age) => (
-                      <div
-                        key={age}
-                        className={`plant-age-option ${selectedPlantAge === age ? 'selected' : ''}`}
-                        onClick={() => setSelectedPlantAge(age)}
-                      >
-                        <div className="age-label">{age} Year{age !== '1' ? 's' : ''}</div>
-                        <div className="age-price">₹{getCurrentPrice(selectedVariant, age).current.toFixed(2)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+{/* {currentProduct.isPlant && (
+  <div className="plant-age-section">
+    <h3 className="variant-title">Choose Plant Age:</h3>
+    <div className="plant-age-options">
+      {['1'].map((age) => {
+        const priceInfo = getCurrentPrice(selectedVariant, age);
+        return (
+          <div
+            key={age}
+            className={`plant-age-option ${selectedPlantAge === age ? 'selected' : ''}`}
+            onClick={() => setSelectedPlantAge(age)}
+          >
+            <div className="age-label">{age} Year{age !== '1' ? 's' : ''}</div>
+            <div className="age-price">₹{priceInfo.current.toFixed(2)}</div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)} */}
 
               {currentProduct.variants && currentProduct.variants.length > 0 && (
                 <div className="variants-section">
