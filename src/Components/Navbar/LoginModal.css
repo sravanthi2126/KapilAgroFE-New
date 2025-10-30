@@ -9,8 +9,8 @@
   backdrop-filter: blur(4px);
   z-index: 1001;
   display: flex;
-  align-items: center; /* CHANGE: Center vertically */
-  justify-content: center; /* CHANGE: Center horizontally */
+  align-items: center;
+  justify-content: center;
   padding: 1rem;
   overflow: auto;
 }
@@ -20,13 +20,13 @@
   background-color: #ffffff;
   border-radius: 20px;
   width: 100%;
-  max-width: 400px; /* CHANGE: Slightly smaller for better proportions */
-  max-height: 80vh; /* CHANGE: Reduce height for better centering */
+  max-width: 480px; /* CHANGED: Increased from 400px to 480px */
+  max-height: 90vh; /* CHANGED: Increased from 80vh to 90vh for better content display */
   overflow-y: auto;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   animation: lm-modal-appear 0.3s ease-out;
   position: relative;
-  margin: auto; /* KEEP: This helps centering */
+  margin: auto;
   display: flex;
   flex-direction: column;
 }
@@ -92,7 +92,7 @@
 
 /* === SCROLLABLE CONTENT === */
 .lm-content {
-  max-height: calc(80vh - 140px); /* CHANGE: Match container height */
+  max-height: calc(90vh - 140px); /* CHANGED: Adjusted to match new container height */
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #d1d5db #f3f4f6;
@@ -118,7 +118,7 @@
 }
 
 .lm-body {
-  padding: 2rem 1.5rem;
+  padding: 2rem 2rem; /* CHANGED: Increased horizontal padding from 1.5rem to 2rem */
 }
 
 /* === LOGIN METHOD TOGGLE === */
@@ -246,7 +246,7 @@
 }
 
 .lm-error-message::before {
-  content: '⚠';
+  content: '⚠ ';
   font-size: 0.7rem;
 }
 
@@ -457,20 +457,23 @@
 /* === RESPONSIVE DESIGN === */
 @media (max-width: 640px) {
   .lm-overlay {
-    padding: 1rem; /* CHANGE: Consistent padding */
-    align-items: center; /* CHANGE: Center on mobile too */
-    justify-content: center; /* CHANGE: Center on mobile */
-    /* REMOVE: padding-top: 2rem; */
+    padding: 1rem;
+    align-items: center;
+    justify-content: center;
   }
   
   .lm-container {
-    max-width: 90%; /* CHANGE: Slightly smaller on mobile */
-    max-height: 85vh; /* CHANGE: Adjust for mobile */
+    max-width: 95%; /* CHANGED: Increased from 90% to 95% */
+    max-height: 90vh; /* CHANGED: Match desktop for consistency */
     border-radius: 16px;
   }
   
   .lm-content {
-    max-height: calc(85vh - 140px); /* CHANGE: Adjust for mobile */
+    max-height: calc(90vh - 140px); /* CHANGED: Match desktop calculation */
+  }
+
+  .lm-body {
+    padding: 1.5rem; /* CHANGED: Better padding for mobile */
   }
 }
 
@@ -543,10 +546,10 @@
 @keyframes lm-modal-appear {
   from {
     opacity: 0;
-    transform: scale(0.9) translateY(0); /* CHANGE: Remove Y translation */
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1);
   }
 }
