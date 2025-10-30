@@ -252,6 +252,105 @@
 }
 
 /* Variants Section for Product Detail */
+/* Plant Age Section */
+.plant-age-section {
+  margin: 20px 0;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.plant-age-section .variant-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.plant-age-options {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.plant-age-option {
+  flex: 1;
+  min-width: 140px;
+  padding: 20px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.plant-age-option:hover {
+  border-color: #4299e1;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(66, 153, 225, 0.15);
+}
+
+.plant-age-option.selected {
+  border-color: #4299e1;
+  background: linear-gradient(135deg, #ebf8ff, #bee3f8);
+  box-shadow: 0 8px 25px rgba(66, 153, 225, 0.2);
+}
+
+.plant-age-option.selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #4299e1;
+}
+
+.age-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.age-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #38a169;
+  line-height: 1.2;
+}
+
+/* Remove unnecessary category badge */
+.product-category-badge {
+  display: none;
+}
+
+/* Responsive design for plant age options */
+@media (max-width: 768px) {
+  .plant-age-options {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .plant-age-option {
+    min-width: unset;
+    padding: 16px 12px;
+  }
+  
+  .age-label {
+    font-size: 14px;
+  }
+  
+  .age-price {
+    font-size: 16px;
+  }
+}
 
 /* Variants Section for Product Detail */
 .variants-section {

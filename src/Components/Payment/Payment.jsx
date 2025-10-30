@@ -13,7 +13,9 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   // Get data from location state
   const { cartItems = [], orderDetails = null, shippingAddress = {}, billingAddress = {} } = location.state || {};
 
-  const [paymentMethod, setPaymentMethod] = useState('razorpay');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentSelected, setPaymentSelected] = useState(false); // ADD THIS LINE
+
   const [loading, setLoading] = useState(false);
   const [fetchingShipping, setFetchingShipping] = useState(false);
   const [error, setError] = useState('');
@@ -455,12 +457,15 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             <div className="payment-methods">
               <label className={`payment-method-option ${paymentMethod === 'razorpay' ? 'selected' : ''}`}>
                 <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="razorpay"
-                  checked={paymentMethod === 'razorpay'}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                />
+      type="radio"
+      name="paymentMethod"
+      value="razorpay"
+      checked={paymentMethod === 'razorpay'}
+      onChange={(e) => {
+        setPaymentMethod(e.target.value);
+        setPaymentSelected(true); // Enable button when payment is selected
+      }}
+    />
                 <div className="payment-method-content">
                   <div className="payment-method-info">
                     <span className="payment-method-title">Online Payment</span>
@@ -472,14 +477,17 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 </div>
               </label>
 
-              <label className={`payment-method-option ${paymentMethod === 'cod' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="cod"
-                  checked={paymentMethod === 'cod'}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                />
+              {/* <label className={`payment-method-option ${paymentMethod === 'cod' ? 'selected' : ''}`}>
+                 <input
+      type="radio"
+      name="paymentMethod"
+      value="cod"
+      checked={paymentMethod === 'cod'}
+      onChange={(e) => {
+        setPaymentMethod(e.target.value);
+        setPaymentSelected(true); // Enable button when payment is selected
+      }}
+    />
                 <div className="payment-method-content">
                   <div className="payment-method-info">
                     <span className="payment-method-title">Cash on Delivery</span>
@@ -489,7 +497,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                     <Truck size={24} className="payment-method-icon" />
                   </div>
                 </div>
-              </label>
+              </label> */}
             </div>
           </div>
         </div>
@@ -600,17 +608,19 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
             <button
               onClick={handlePlaceOrder}
-              className="kapil-place-order-button"
-              disabled={loading || cartItems.length === 0 || fetchingShipping}
-            >
-              {loading ? (
-                <div className="kapil-payment-spinner"></div>
-              ) : (
-                <>
-                  <IndianRupee size={20} />
-                  Place Order - ₹{parseFloat(currentOrderDetails.totalAmount || 0).toFixed(2)}
-                </>
-              )}
+  className="kapil-place-order-button"
+  disabled={loading || cartItems.length === 0 || fetchingShipping || !paymentSelected}
+>
+  {loading ? (
+    <div className="kapil-payment-spinner"></div>
+  ) : !paymentSelected ? (
+    "Select Payment Method" // Show this when no payment method selected
+  ) : (
+    <>
+      <IndianRupee size={20} />
+      Place Order - ₹{parseFloat(currentOrderDetails.totalAmount || 0).toFixed(2)}
+    </>
+  )}
             </button>
 
             <div className="security-info">

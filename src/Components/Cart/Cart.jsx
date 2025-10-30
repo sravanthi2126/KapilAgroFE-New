@@ -486,12 +486,27 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
                   <Package size={80} className="kapil-cart-empty-icon" />
                   <h4>Your cart is empty</h4>
                   <p>Add some delicious products to get started!</p>
-                  <button
-                    onClick={() => setIsCartOpen(false)}
-                    className="kapil-cart-continue"
-                  >
-                    Continue Shopping
-                  </button>
+                <button
+  onClick={() => {
+    setIsCartOpen(false);
+    const currentPath = window.location.pathname;
+    
+    if (currentPath.startsWith('/products')) {
+      // If user is on product detail page, go back to categories
+      navigate('/categories');
+    } else if (currentPath === '/') {
+      // If user is on home page, scroll to categories section
+      navigate('/categories');
+    } else {
+      // If already on categories, just close cart
+      // Optional: scroll to top of categories
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }}
+  className="kapil-cart-continue"
+>
+  Continue Shopping
+</button>
                 </div>
               ) : (
                 <div className="kapil-cart-items">
@@ -590,8 +605,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
                                   disabled={updatingItems.has(item.cartItemId)}
                                 >
                                   <option value="1">1 Year</option>
-                                  <option value="2">2 Years</option>
-                                  <option value="3">3 Years</option>
+                                  
                                 </select>
                               </div>
                             )}
