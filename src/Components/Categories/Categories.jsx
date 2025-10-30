@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Categories.css';
+import { apiClient, scheduleTokenRefresh } from '../../services/authService';
 
 const Categories = ({ setCurrentPage }) => {
   const [categories, setCategories] = useState([]);
@@ -12,14 +13,14 @@ const Categories = ({ setCurrentPage }) => {
     setCurrentPage('categories'); // Set current page to 'categories'
     const fetchCategories = async () => {
       try {
-        const response = await fetch('http://localhost:8080/user/categories');
-        const data = await response.json();
-        
-        if (data.status === 'success') {
-          setCategories(data.data);
-        } else {
-          setError('Failed to fetch categories');
-        }
+        const response = await apiClient.get('user/categories');
+const data = response.data; // ✅ Axios already gives parsed JSON
+
+if (data.status === 'success') {
+  setCategories(data.data);
+} else {
+  setError('Failed to fetch categories');
+}
       } catch (err) {
         setError('Error fetching categories: ' + err.message);
       } finally {
