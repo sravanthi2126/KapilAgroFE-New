@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { apiClient } from '../../services/authService';
-import { CreditCard, ArrowLeft, Truck, MapPin, Package, IndianRupee, CheckCircle, Shield } from 'lucide-react';
+import { CreditCard, ArrowLeft, MapPin, Package, IndianRupee, CheckCircle } from 'lucide-react';
 import { FaCreditCard, FaLock } from 'react-icons/fa';
 import './Payment.css';
 
@@ -10,8 +10,12 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get data from location state
-  const { cartItems = [], orderDetails = null, shippingAddress = {}, billingAddress = {} } = location.state || {};
+  // Get data from location state and parse addresses
+  const { cartItems = [], orderDetails = null, shippingAddress: shippingAddressStr = '{}', billingAddress: billingAddressStr = '{}' } = location.state || {};
+
+  // Parse addresses from JSON strings
+  const shippingAddress = typeof shippingAddressStr === 'string' ? JSON.parse(shippingAddressStr) : shippingAddressStr;
+  const billingAddress = typeof billingAddressStr === 'string' ? JSON.parse(billingAddressStr) : billingAddressStr;
 
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentSelected, setPaymentSelected] = useState(false);
@@ -174,7 +178,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       });
 
       if (response.data.status === 'success') {
-        const permanentOrderId = response.data.data.orderId; // Updated to access nested orderId
+        let permanentOrderId = response.data.data.orderId; // Changed from const to let
         const invoiceId = response.data.data.invoiceId; // Extract invoiceId from response
         if (!permanentOrderId) {
           throw new Error('Permanent order ID not found in response');
@@ -553,11 +557,20 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 {shippingAddress.firstName} {shippingAddress.lastName}
               </div>
               <div className="address-details">
-                <p>{shippingAddress.addressLine1}</p>
-                {shippingAddress.addressLine2 && <p>{shippingAddress.addressLine2}</p>}
-                <p>{shippingAddress.city}, {shippingAddress.state}</p>
-                <p>Pincode: {shippingAddress.pincode}</p>
-                <p className="address-phone">Phone: {shippingAddress.phone}</p>
+                <div className="address-line">
+                  {shippingAddress.addressLine1}
+                </div>
+                {shippingAddress.addressLine2 && (
+                  <div className="address-line">
+                    {shippingAddress.addressLine2}
+                  </div>
+                )}
+                <div className="address-line">
+                  {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}
+                </div>
+                <div className="address-phone">
+                  📱 {shippingAddress.phone}
+                </div>
               </div>
             </div>
           </div>
