@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { apiClient } from '../../services/authService';
-import { CreditCard, ArrowLeft, Truck, MapPin, Package, IndianRupee } from 'lucide-react';
-import { FaCreditCard } from 'react-icons/fa';
+import { CreditCard, ArrowLeft, Truck, MapPin, Package, IndianRupee, CheckCircle, Shield } from 'lucide-react';
+import { FaCreditCard, FaLock } from 'react-icons/fa';
 import './Payment.css';
 
 const Payment = ({ cart, setCart, setIsLoginOpen }) => {
@@ -14,8 +14,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   const { cartItems = [], orderDetails = null, shippingAddress = {}, billingAddress = {} } = location.state || {};
 
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [paymentSelected, setPaymentSelected] = useState(false); // ADD THIS LINE
-
+  const [paymentSelected, setPaymentSelected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchingShipping, setFetchingShipping] = useState(false);
   const [error, setError] = useState('');
@@ -153,155 +152,155 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
     }
   };
 
- const verifyPayment = async (paymentData) => {
-  try {
-    console.log('Verifying payment with data:', paymentData);
-    const token = localStorage.getItem('token');
-    const payload = {
-      razorpayOrderId: paymentData.razorpayOrderId,
-      razorpayPaymentId: paymentData.razorpayPaymentId,
-      razorpaySignature: paymentData.razorpaySignature,
-      amount: paymentData.amount.toString(), // Amount in rupees as string
-      orderId: paymentData.orderId,
-    };
-    console.log('Payload sent to backend:', payload); // Log for debugging
+  const verifyPayment = async (paymentData) => {
+    try {
+      console.log('Verifying payment with data:', paymentData);
+      const token = localStorage.getItem('token');
+      const payload = {
+        razorpayOrderId: paymentData.razorpayOrderId,
+        razorpayPaymentId: paymentData.razorpayPaymentId,
+        razorpaySignature: paymentData.razorpaySignature,
+        amount: paymentData.amount.toString(), // Amount in rupees as string
+        orderId: paymentData.orderId,
+      };
+      console.log('Payload sent to backend:', payload); // Log for debugging
 
-    // Call payment success endpoint
-    const response = await apiClient.post('/user/orders/payment/success', payload, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+      // Call payment success endpoint
+      const response = await apiClient.post('/user/orders/payment/success', payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-    if (response.data.status === 'success') {
-      const permanentOrderId = response.data.data.orderId; // Updated to access nested orderId
-      const invoiceId = response.data.data.invoiceId; // Extract invoiceId from response
-      if (!permanentOrderId) {
-        throw new Error('Permanent order ID not found in response');
-      }
-
-      console.log('Permanent orderId from payment/success:', permanentOrderId);
-      console.log('InvoiceId from payment/success:', invoiceId);
-
-      // Fetch order details with permanent orderId
-      let orderDetails = null;
-      try {
-        const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (orderResponse.data.status === 'success') {
-          orderDetails = orderResponse.data.data;
+      if (response.data.status === 'success') {
+        const permanentOrderId = response.data.data.orderId; // Updated to access nested orderId
+        const invoiceId = response.data.data.invoiceId; // Extract invoiceId from response
+        if (!permanentOrderId) {
+          throw new Error('Permanent order ID not found in response');
         }
-      } catch (fetchError) {
-        console.error('Error fetching order with orderId:', permanentOrderId, fetchError);
-        // Fallback: Fetch user's latest order
-        const ordersResponse = await apiClient.get('/user/orders', {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
 
-        if (ordersResponse.data.status === 'success' && ordersResponse.data.data.length > 0) {
-          const latestOrder = ordersResponse.data.data.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))[0];
-          permanentOrderId = latestOrder.orderId;
-          orderDetails = latestOrder;
-          console.log('Fallback to latest orderId:', permanentOrderId);
+        console.log('Permanent orderId from payment/success:', permanentOrderId);
+        console.log('InvoiceId from payment/success:', invoiceId);
+
+        // Fetch order details with permanent orderId
+        let orderDetails = null;
+        try {
+          const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (orderResponse.data.status === 'success') {
+            orderDetails = orderResponse.data.data;
+          }
+        } catch (fetchError) {
+          console.error('Error fetching order with orderId:', permanentOrderId, fetchError);
+          // Fallback: Fetch user's latest order
+          const ordersResponse = await apiClient.get('/user/orders', {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (ordersResponse.data.status === 'success' && ordersResponse.data.data.length > 0) {
+            const latestOrder = ordersResponse.data.data.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))[0];
+            permanentOrderId = latestOrder.orderId;
+            orderDetails = latestOrder;
+            console.log('Fallback to latest orderId:', permanentOrderId);
+          } else {
+            throw new Error('No orders found for user');
+          }
+        }
+
+        if (orderDetails) {
+          return {
+            success: true,
+            message: response.data.message,
+            shipway_status: response.data.shipway_status || 'success',
+            orderDetails: {
+              orderId: orderDetails.orderId,
+              invoiceId: invoiceId, // Add invoiceId to orderDetails
+              razorpayOrderId: paymentData.razorpayOrderId,
+              razorpayPaymentId: paymentData.razorpayPaymentId,
+              totalAmount: orderDetails.totalAmount,
+              paymentMethod: orderDetails.paymentMethod || 'Online Payment (Razorpay)',
+              paymentStatus: orderDetails.paymentStatus || 'Success',
+              orderDate: orderDetails.orderDate || new Date().toISOString(),
+              shippingcharges: orderDetails.shippingAmount,
+              subtotalAmount: orderDetails.subtotalAmount,
+              originalAmount: orderDetails.originalAmount,
+              productDiscountAmount: orderDetails.productDiscountAmount,
+              orderDiscountAmount: orderDetails.orderDiscountAmount,
+              totalTaxAmount: orderDetails.totalTaxAmount,
+            },
+          };
         } else {
-          throw new Error('No orders found for user');
+          throw new Error('Failed to fetch updated order details');
         }
-      }
-
-      if (orderDetails) {
-        return {
-          success: true,
-          message: response.data.message,
-          shipway_status: response.data.shipway_status || 'success',
-          orderDetails: {
-            orderId: orderDetails.orderId,
-            invoiceId: invoiceId, // Add invoiceId to orderDetails
-            razorpayOrderId: paymentData.razorpayOrderId,
-            razorpayPaymentId: paymentData.razorpayPaymentId,
-            totalAmount: orderDetails.totalAmount,
-            paymentMethod: orderDetails.paymentMethod || 'Online Payment (Razorpay)',
-            paymentStatus: orderDetails.paymentStatus || 'Success',
-            orderDate: orderDetails.orderDate || new Date().toISOString(),
-            shippingcharges: orderDetails.shippingAmount,
-            subtotalAmount: orderDetails.subtotalAmount,
-            originalAmount: orderDetails.originalAmount,
-            productDiscountAmount: orderDetails.productDiscountAmount,
-            orderDiscountAmount: orderDetails.orderDiscountAmount,
-            totalTaxAmount: orderDetails.totalTaxAmount,
-          },
-        };
       } else {
-        throw new Error('Failed to fetch updated order details');
+        throw new Error(response.data?.message || 'Payment verification failed');
       }
-    } else {
-      throw new Error(response.data?.message || 'Payment verification failed');
+    } catch (error) {
+      console.error('Payment verification failed:', {
+        message: error.message,
+        response: error.response?.data,
+      });
+      throw error;
     }
-  } catch (error) {
-    console.error('Payment verification failed:', {
-      message: error.message,
-      response: error.response?.data,
-    });
-    throw error;
-  }
-};
+  };
 
- const navigateToOrderConfirmation = (orderData, successMessage) => {
-  console.log('Navigating to order confirmation with orderId:', orderData.orderDetails?.orderId || orderData.orderId);
-  setCart([]);
-  toast.success(successMessage, {
-    position: 'bottom-right',
-    autoClose: 5000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-  });
-
-  const orderId = orderData.orderDetails?.orderId || orderData.orderId;
-  const invoiceId = orderData.orderDetails?.invoiceId; // Extract invoiceId
-  if (!orderId) {
-    console.error('No orderId found for navigation');
-    toast.error('Order ID not found. Please contact support.', {
+  const navigateToOrderConfirmation = (orderData, successMessage) => {
+    console.log('Navigating to order confirmation with orderId:', orderData.orderDetails?.orderId || orderData.orderId);
+    setCart([]);
+    toast.success(successMessage, {
       position: 'bottom-right',
       autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
     });
-    return;
-  }
 
-  try {
-    navigate('/order-confirmation', {
-      state: {
-        orderId: orderId,
-        invoiceId: invoiceId, // Pass invoiceId to OrderConfirmation
-        cartItems,
-        orderDetails: orderData.orderDetails || orderData,
-        shippingAddress,
-        billingAddress,
-        orderSummary: {
-          subtotal: parseFloat(currentOrderDetails.subtotalAmount || 0),
-          originalAmount: parseFloat(currentOrderDetails.originalAmount || 0),
-          productDiscountAmount: parseFloat(currentOrderDetails.productDiscountAmount || 0),
-          orderDiscountAmount: parseFloat(currentOrderDetails.orderDiscountAmount || 0),
-          shippingCharges: parseFloat(currentOrderDetails.shippingcharges || 0),
-          taxes: parseFloat(currentOrderDetails.totalTaxAmount || 0),
-          total: parseFloat(currentOrderDetails.totalAmount || 0),
+    const orderId = orderData.orderDetails?.orderId || orderData.orderId;
+    const invoiceId = orderData.orderDetails?.invoiceId; // Extract invoiceId
+    if (!orderId) {
+      console.error('No orderId found for navigation');
+      toast.error('Order ID not found. Please contact support.', {
+        position: 'bottom-right',
+        autoClose: 5000,
+      });
+      return;
+    }
+
+    try {
+      navigate('/order-confirmation', {
+        state: {
+          orderId: orderId,
+          invoiceId: invoiceId, // Pass invoiceId to OrderConfirmation
+          cartItems,
+          orderDetails: orderData.orderDetails || orderData,
+          shippingAddress,
+          billingAddress,
+          orderSummary: {
+            subtotal: parseFloat(currentOrderDetails.subtotalAmount || 0),
+            originalAmount: parseFloat(currentOrderDetails.originalAmount || 0),
+            productDiscountAmount: parseFloat(currentOrderDetails.productDiscountAmount || 0),
+            orderDiscountAmount: parseFloat(currentOrderDetails.orderDiscountAmount || 0),
+            shippingCharges: parseFloat(currentOrderDetails.shippingcharges || 0),
+            taxes: parseFloat(currentOrderDetails.totalTaxAmount || 0),
+            total: parseFloat(currentOrderDetails.totalAmount || 0),
+          },
         },
-      },
-    });
-  } catch (navError) {
-    console.error('Navigation error:', navError);
-    window.location.href = '/order-confirmation';
-  }
-};
+      });
+    } catch (navError) {
+      console.error('Navigation error:', navError);
+      window.location.href = '/order-confirmation';
+    }
+  };
 
   const handlePlaceOrder = async () => {
     if (!currentOrderDetails) {
@@ -408,12 +407,15 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
   if (!currentOrderDetails) {
     return (
-      <div className="kapil-payment-container">
-        <button onClick={() => navigate(-1)} className="kapil-payment-back" title="Back to Address">
-          <ArrowLeft size={20} />
-          Back to Address
-        </button>
-        <div className="kapil-payment-error">
+      <div className="payment-container">
+        <div className="payment-header">
+          <button onClick={() => navigate(-1)} className="back-button">
+            <ArrowLeft size={20} />
+            Back to Address
+          </button>
+          <h1>Payment</h1>
+        </div>
+        <div className="payment-error">
           Order details not found. Please go back and try again.
         </div>
       </div>
@@ -421,96 +423,25 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   }
 
   return (
-    <div className="kapil-payment-container">
-      <button onClick={() => navigate(-1)} className="kapil-payment-back" title="Back to Address">
-        <ArrowLeft size={20} />
-        Back to Address
-      </button>
+    <div className="payment-container">
+      <div className="payment-header">
+        <button onClick={() => navigate(-1)} className="back-button">
+          <ArrowLeft size={20} />
+          Back to Address
+        </button>
+        <h1>Payment</h1>
+      </div>
 
-      <div className="kapil-payment-layout">
-        {/* Left Column - Address & Payment Method */}
-        <div className="kapil-payment-left">
-          <div className="kapil-payment-card delivery-address-section">
-            <div className="kapil-payment-card-header">
-              <MapPin size={20} />
-              <h3>Shipping Address</h3>
-            </div>
-            <div className="kapil-address-display">
-              <div className="address-name">
-                {shippingAddress.firstName} {shippingAddress.lastName}
-              </div>
-              <div className="address-details">
-                <p>{shippingAddress.addressLine1}</p>
-                {shippingAddress.addressLine2 && <p>{shippingAddress.addressLine2}</p>}
-                <p>{shippingAddress.state}</p>
-                <p>Pincode: {shippingAddress.pincode}</p>
-                <p className="address-phone">Phone: {shippingAddress.phone}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="kapil-payment-card payment-method-section">
-            <div className="kapil-payment-card-header">
-              <CreditCard size={20} />
-              <h3>Payment Method</h3>
-            </div>
-            <div className="payment-methods">
-              <label className={`payment-method-option ${paymentMethod === 'razorpay' ? 'selected' : ''}`}>
-                <input
-      type="radio"
-      name="paymentMethod"
-      value="razorpay"
-      checked={paymentMethod === 'razorpay'}
-      onChange={(e) => {
-        setPaymentMethod(e.target.value);
-        setPaymentSelected(true); // Enable button when payment is selected
-      }}
-    />
-                <div className="payment-method-content">
-                  <div className="payment-method-info">
-                    <span className="payment-method-title">Online Payment</span>
-                    <span className="payment-method-desc">UPI, Cards, NetBanking, Wallets</span>
-                  </div>
-                  <div className="payment-method-logos">
-                    <FaCreditCard className="payment-method-icon" size={24} />
-                  </div>
-                </div>
-              </label>
-
-              {/* <label className={`payment-method-option ${paymentMethod === 'cod' ? 'selected' : ''}`}>
-                 <input
-      type="radio"
-      name="paymentMethod"
-      value="cod"
-      checked={paymentMethod === 'cod'}
-      onChange={(e) => {
-        setPaymentMethod(e.target.value);
-        setPaymentSelected(true); // Enable button when payment is selected
-      }}
-    />
-                <div className="payment-method-content">
-                  <div className="payment-method-info">
-                    <span className="payment-method-title">Cash on Delivery</span>
-                    <span className="payment-method-desc">Pay when your order arrives</span>
-                  </div>
-                  <div className="payment-method-logos">
-                    <Truck size={24} className="payment-method-icon" />
-                  </div>
-                </div>
-              </label> */}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Order Summary */}
-        <div className="kapil-payment-right order-summary-section">
-          <div className="kapil-payment-card">
-            <div className="kapil-payment-card-header">
+      <div className="payment-layout">
+        {/* Left Column - Order Summary & Items */}
+        <div className="payment-left">
+          <div className="order-summary-card">
+            <div className="card-header">
               <Package size={20} />
-              <h3>Order Summary ({cartItems.length} items)</h3>
+              <h2>Order Summary ({cartItems.length} items)</h2>
             </div>
 
-            <div className="kapil-order-items-list">
+            <div className="order-items-list">
               {cartItems.map((item) => {
                 const originalPrice = parseFloat(item.price || 0);
                 const discountedPrice = parseFloat(item.after_discount_price || item.price || 0);
@@ -522,35 +453,39 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 const unit = item.unit || '';
 
                 return (
-                  <div key={item.cartItemId} className="kapil-order-item-card">
-                    <img
-                      src={item.image_url || '/images/placeholder.jpg'}
-                      alt={item.product_name}
-                      className="kapil-order-item-image"
-                      onError={(e) => (e.target.src = '/images/placeholder.jpg')}
-                    />
-                    <div className="kapil-order-item-info">
-                      <h4 className="item-name">{item.product_name}</h4>
-                      <div className="item-details">
+                  <div key={item.cartItemId} className="order-item">
+                    <div className="item-image-container">
+                      <img
+                        src={item.image_url || '/images/placeholder.jpg'}
+                        alt={item.product_name}
+                        className="item-image"
+                        onError={(e) => (e.target.src = '/images/placeholder.jpg')}
+                      />
+                    </div>
+                    <div className="item-details">
+                      <h3 className="item-name">{item.product_name}</h3>
+                      <div className="item-meta">
                         <span className="item-quantity">Qty: {quantity}</span>
                         {unit && <span className="item-unit">Unit: {unit}</span>}
+                      </div>
+                      <div className="item-pricing">
                         {hasDiscount && (
                           <>
-                            <span className="item-original-price">₹{originalPrice.toFixed(2)}</span>
-                            <span className="item-discount">{discountPercentage}% OFF</span>
+                            <span className="original-price">₹{originalPrice.toFixed(2)}</span>
+                            <span className="discount-badge">{discountPercentage}% OFF</span>
                           </>
                         )}
-                        <span className="item-price">₹{discountedPrice.toFixed(2)}</span>
+                        <span className="current-price">₹{discountedPrice.toFixed(2)}</span>
                       </div>
                     </div>
                     <div className="item-total">
                       {hasDiscount ? (
-                        <div className="item-total-breakdown">
-                          <span className="item-original-total">₹{originalTotal.toFixed(2)}</span>
-                          <span className="item-final-total">₹{finalTotal.toFixed(2)}</span>
+                        <div className="total-breakdown">
+                          <span className="original-total">₹{originalTotal.toFixed(2)}</span>
+                          <span className="final-total">₹{finalTotal.toFixed(2)}</span>
                         </div>
                       ) : (
-                        <span className="item-final-total">₹{finalTotal.toFixed(2)}</span>
+                        <span className="final-total">₹{finalTotal.toFixed(2)}</span>
                       )}
                     </div>
                   </div>
@@ -558,7 +493,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
               })}
             </div>
 
-            <div className="kapil-price-breakdown">
+            <div className="price-breakdown">
               <div className="price-row">
                 <span>Original Amount</span>
                 <span>₹{parseFloat(currentOrderDetails.originalAmount || 0).toFixed(2)}</span>
@@ -603,28 +538,113 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 <span>₹{parseFloat(currentOrderDetails.totalAmount || 0).toFixed(2)}</span>
               </div>
             </div>
+          </div>
+        </div>
 
-            {error && <div className="kapil-payment-error">{error}</div>}
+        {/* Right Column - Address & Payment Method */}
+        <div className="payment-right">
+          <div className="address-card">
+            <div className="card-header">
+              <MapPin size={20} />
+              <h2>Shipping Address</h2>
+            </div>
+            <div className="address-display">
+              <div className="address-name">
+                {shippingAddress.firstName} {shippingAddress.lastName}
+              </div>
+              <div className="address-details">
+                <p>{shippingAddress.addressLine1}</p>
+                {shippingAddress.addressLine2 && <p>{shippingAddress.addressLine2}</p>}
+                <p>{shippingAddress.city}, {shippingAddress.state}</p>
+                <p>Pincode: {shippingAddress.pincode}</p>
+                <p className="address-phone">Phone: {shippingAddress.phone}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="payment-method-card">
+            <div className="card-header">
+              <CreditCard size={20} />
+              <h2>Payment Method</h2>
+            </div>
+            <div className="payment-options">
+              <label className={`payment-option ${paymentMethod === 'razorpay' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="razorpay"
+                  checked={paymentMethod === 'razorpay'}
+                  onChange={(e) => {
+                    setPaymentMethod(e.target.value);
+                    setPaymentSelected(true);
+                  }}
+                />
+                <div className="payment-option-content">
+                  <div className="payment-icon">
+                    <FaCreditCard size={24} />
+                  </div>
+                  <div className="payment-info">
+                    <span className="payment-title">Online Payment</span>
+                    <span className="payment-desc">UPI, Cards, NetBanking, Wallets</span>
+                  </div>
+                  <div className="payment-check">
+                    <CheckCircle size={20} />
+                  </div>
+                </div>
+              </label>
+
+              {/* Uncomment if you want to enable COD
+              <label className={`payment-option ${paymentMethod === 'cod' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="cod"
+                  checked={paymentMethod === 'cod'}
+                  onChange={(e) => {
+                    setPaymentMethod(e.target.value);
+                    setPaymentSelected(true);
+                  }}
+                />
+                <div className="payment-option-content">
+                  <div className="payment-icon">
+                    <Truck size={24} />
+                  </div>
+                  <div className="payment-info">
+                    <span className="payment-title">Cash on Delivery</span>
+                    <span className="payment-desc">Pay when your order arrives</span>
+                  </div>
+                  <div className="payment-check">
+                    <CheckCircle size={20} />
+                  </div>
+                </div>
+              </label>
+              */}
+            </div>
+
+            {error && <div className="payment-error">{error}</div>}
 
             <button
               onClick={handlePlaceOrder}
-  className="kapil-place-order-button"
-  disabled={loading || cartItems.length === 0 || fetchingShipping || !paymentSelected}
->
-  {loading ? (
-    <div className="kapil-payment-spinner"></div>
-  ) : !paymentSelected ? (
-    "Select Payment Method" // Show this when no payment method selected
-  ) : (
-    <>
-      <IndianRupee size={20} />
-      Place Order - ₹{parseFloat(currentOrderDetails.totalAmount || 0).toFixed(2)}
-    </>
-  )}
+              className="place-order-button"
+              disabled={loading || cartItems.length === 0 || fetchingShipping || !paymentSelected}
+            >
+              {loading ? (
+                <div className="payment-spinner"></div>
+              ) : !paymentSelected ? (
+                "Select Payment Method"
+              ) : (
+                <>
+                  <IndianRupee size={20} />
+                  Place Order - ₹{parseFloat(currentOrderDetails.totalAmount || 0).toFixed(2)}
+                </>
+              )}
             </button>
 
-            <div className="security-info">
-              <p>🔒 Your payment information is secure and encrypted</p>
+            <div className="security-notice">
+              <div className="security-icon">
+                <FaLock size={16} />
+              </div>
+              <p>Your payment information is secure and encrypted</p>
             </div>
           </div>
         </div>
