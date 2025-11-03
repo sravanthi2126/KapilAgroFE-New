@@ -1,11 +1,11 @@
 // authService.js
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode'; // Changed to named import
+import { jwtDecode } from 'jwt-decode';
 
 const apiClient = axios.create({
   baseURL: 'http://localhost:8080',
-    // baseURL: 'https://shopapi.kapilagro.com',
-  timeout: 15000, // Increased timeout to 15 seconds
+  // baseURL: 'https://shopapi.kapilagro.com',
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,16 +25,14 @@ export const isTokenExpired = (token) => {
   if (!token) return true;
   try {
     const decoded = jwtDecode(token);
-    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+    const currentTime = Math.floor(Date.now() / 1000);
     return decoded.exp < currentTime;
   } catch (error) {
     console.error('Error decoding token:', error);
-    return true; // Treat invalid tokens as expired
+    return true;
   }
 };
 
-// Modified isAuthenticated function
-// In authService.js - Fix the isAuthenticated function
 export const isAuthenticated = () => {
   try {
     const token = localStorage.getItem('token');
@@ -56,9 +54,8 @@ export const refreshAccessToken = async () => {
     const response = await apiClient.post('/user/refresh-token', { refreshToken });
     const { token, refreshToken: newRefreshToken } = response.data;
 
-    // Update tokens in localStorage
     localStorage.setItem('token', token);
-    localStorage.setItem('refreshToken', newRefreshToken || refreshToken); // Update refresh token if provided
+    localStorage.setItem('refreshToken', newRefreshToken || refreshToken);
     setAuthToken(token);
 
     return token;
@@ -80,15 +77,14 @@ export const scheduleTokenRefresh = () => {
     const currentTime = Math.floor(Date.now() / 1000);
     const expiresIn = decoded.exp - currentTime;
     
-    // Refresh token 1 minute before expiration
-    const refreshTime = (expiresIn - 60) * 1000; // Convert to milliseconds
+    const refreshTime = (expiresIn - 60) * 1000;
 
     if (refreshTime > 0) {
       setTimeout(async () => {
         try {
           await refreshAccessToken();
           console.log('Token refreshed proactively');
-          scheduleTokenRefresh(); // Schedule next refresh
+          scheduleTokenRefresh();
         } catch (error) {
           console.error('Proactive token refresh failed:', error);
         }
@@ -108,11 +104,9 @@ apiClient.interceptors.request.use(
     } else if (token) {
       console.log('Token expired, clearing auth');
       clearAuth();
-      // Optionally redirect to login page
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
     }
     
-    // Log request for debugging
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
       headers: config.headers,
       data: config.data
@@ -129,7 +123,6 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle errors globally
 apiClient.interceptors.response.use(
   (response) => {
-    // Log successful response for debugging
     console.log(`API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
       status: response.status,
       data: response.data
@@ -149,21 +142,19 @@ apiClient.interceptors.response.use(
     });
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Prevent infinite retry loops
+      originalRequest._retry = true;
       try {
         const newToken = await refreshAccessToken();
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return apiClient(originalRequest); // Retry the original request
+        return apiClient(originalRequest);
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
-        // Redirect to login page or show login modal
         window.location.href = '/';
         return Promise.reject(refreshError);
       }
     }
 
     if (error.response) {
-      // Handle specific status codes
       switch (error.response.status) {
         case 401:
           console.log('Unauthorized - Token expired or invalid');
@@ -198,7 +189,56 @@ apiClient.interceptors.response.use(
   }
 );
 
-// Generic GET request
+// Authentication API functions
+export const authAPI = {
+  // Email login
+  loginWithEmail: async (email, password) => {
+    const response = await apiClient.post('/user/login', { email, password });
+    return response.data;
+  },
+
+  // Phone OTP request for login
+  requestLoginOTP: async (phoneNo) => {
+    const response = await apiClient.post('/user/login/otp/request', { phoneNo });
+    return response.data;
+  },
+
+  // Phone OTP verification for login
+  verifyLoginOTP: async (phoneNo, otp) => {
+    const response = await apiClient.post('/user/login/otp/verify', { 
+      phoneNo, 
+      otp: otp.toString() // Ensure OTP is string
+    });
+    return response.data;
+  },
+
+  // Registration OTP request
+  requestRegisterOTP: async (userData) => {
+    const response = await apiClient.post('/user/register/otp/request', userData);
+    return response.data;
+  },
+
+  // Registration OTP verification - FIXED THIS
+  verifyRegisterOTP: async (phoneNo, otp) => {
+    console.log('Sending verify OTP request:', { phoneNo, otp });
+    
+    const response = await apiClient.post('/user/register/otp/verify', { 
+      phoneNo: phoneNo.toString(), // Ensure phoneNo is string
+      otp: otp.toString() // Ensure OTP is string
+    });
+    
+    return response.data;
+  },
+
+  // Fetch user cart
+  fetchUserCart: async () => {
+    const response = await apiClient.get('/user/cart/usercart');
+    return response.data;
+  }
+};
+
+
+// Generic HTTP methods
 export const get = async (url, config = {}) => {
   try {
     const response = await apiClient.get(url, config);
@@ -208,7 +248,6 @@ export const get = async (url, config = {}) => {
   }
 };
 
-// Generic POST request
 export const post = async (url, data = {}, config = {}) => {
   try {
     const response = await apiClient.post(url, data, config);
@@ -218,10 +257,8 @@ export const post = async (url, data = {}, config = {}) => {
   }
 };
 
-// Generic PUT request with JSON support (not form-urlencoded)
 export const put = async (url, data = {}, config = {}) => {
   try {
-    // Check if the request should be form-urlencoded
     const isFormData = config.headers?.['Content-Type'] === 'application/x-www-form-urlencoded';
     
     let requestData = data;
@@ -238,7 +275,6 @@ export const put = async (url, data = {}, config = {}) => {
         'Content-Type': 'application/x-www-form-urlencoded',
       };
     } else {
-      // Default to JSON
       requestConfig.headers = {
         ...requestConfig.headers,
         'Content-Type': 'application/json',
@@ -252,7 +288,6 @@ export const put = async (url, data = {}, config = {}) => {
   }
 };
 
-// Generic DELETE request
 export const del = async (url, config = {}) => {
   try {
     const response = await apiClient.delete(url, config);
@@ -274,12 +309,6 @@ export const clearAuth = () => {
   delete apiClient.defaults.headers.Authorization;
 };
 
-// Export apiClient for direct use
-export { apiClient, setAuthToken };
-
-
-// ------------
-// Add this function to authService.js
 export const validateAndRefreshToken = async () => {
   const token = localStorage.getItem('token');
   
@@ -300,3 +329,6 @@ export const validateAndRefreshToken = async () => {
   
   return true;
 };
+
+// Export apiClient for direct use
+export { apiClient, setAuthToken };

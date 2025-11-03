@@ -5,6 +5,202 @@
   box-sizing: border-box;
 }
 
+
+/* Force navbar exact height */
+.kapil-navbar {
+  height: 68px !important;
+  min-height: 68px !important;
+  max-height: 68px !important;
+}
+
+.kapil-navbar-container {
+  height: 68px !important;
+  min-height: 68px !important;
+  max-height: 68px !important;
+  box-sizing: border-box !important;
+}
+
+/* Reduce image sizes to fit */
+.kapil-navbar-image-slot {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+}
+
+.kapil-logo-title {
+  font-size: 1.35rem !important;
+  line-height: 1.2 !important;
+}
+
+/* Hide desktop nav by default (show only above 1400px) */
+.kapil-navbar-desktop {
+  display: none !important;
+}
+
+.kapil-desktop-search,
+.kapil-desktop-user,
+.kapil-desktop-login {
+  display: none !important;
+}
+
+/* Show mobile toggles by default */
+.kapil-mobile-search-toggle,
+.kapil-navbar-mobile-toggle {
+  display: flex !important;
+}
+
+/* Desktop mode ONLY above 1400px */
+@media (min-width: 1400px) {
+  .kapil-navbar {
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+  }
+  
+  .kapil-navbar-container {
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+    padding: 0 2.5rem !important;
+  }
+  
+  .kapil-navbar-image-slot {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  
+  .kapil-logo-title {
+    font-size: 1.45rem !important;
+  }
+  
+  /* Show desktop nav */
+  .kapil-navbar-desktop {
+    display: flex !important;
+  }
+  
+  .kapil-desktop-search,
+  .kapil-desktop-user,
+  .kapil-desktop-login {
+    display: flex !important;
+  }
+  
+  /* Hide mobile toggles */
+  .kapil-mobile-search-toggle,
+  .kapil-navbar-mobile-toggle {
+    display: none !important;
+  }
+}
+
+/* Below 1400px adjustments */
+@media (max-width: 1399px) {
+  .kapil-navbar,
+  .kapil-navbar-container {
+    height: 62px !important;
+    min-height: 62px !important;
+    max-height: 62px !important;
+  }
+  
+  .kapil-navbar-container {
+    padding: 0 1.5rem !important;
+  }
+  
+  .kapil-navbar-image-slot {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  
+  .kapil-logo-title {
+    font-size: 1.2rem !important;
+  }
+}
+
+@media (max-width: 776px) {
+  .kapil-navbar,
+  .kapil-navbar-container {
+    height: 58px !important;
+    min-height: 58px !important;
+    max-height: 58px !important;
+  }
+  
+  .kapil-navbar-container {
+    padding: 0 1rem !important;
+  }
+  
+  .kapil-navbar-image-slot {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  
+  .kapil-logo-title {
+    font-size: 1.1rem !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .kapil-navbar,
+  .kapil-navbar-container {
+    height: 54px !important;
+    min-height: 54px !important;
+    max-height: 54px !important;
+  }
+  
+  .kapil-navbar-container {
+    padding: 0 0.5rem !important;
+  }
+  
+  .kapil-navbar-image-slot {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .kapil-logo-title {
+    font-size: 0.95rem !important;
+  }
+}
+
+/* Mobile menu positioning */
+.kapil-navbar-mobile-menu {
+  top: 68px !important;
+}
+
+@media (min-width: 1400px) {
+  .kapil-navbar-mobile-menu {
+    top: 70px !important;
+  }
+}
+
+@media (max-width: 1399px) {
+  .kapil-navbar-mobile-menu {
+    top: 62px !important;
+  }
+}
+
+@media (max-width: 776px) {
+  .kapil-navbar-mobile-menu {
+    top: 58px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .kapil-navbar-mobile-menu {
+    top: 54px !important;
+  }
+}
+
+/* ================================================
+   ORIGINAL NAVBAR STYLES BELOW
+   ================================================ */
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 /* Main navbar container */
 .kapil-navbar {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
@@ -50,8 +246,8 @@
 }
 
 .kapil-navbar-image-slot {
-  width: 70px;
-  height: 70px;
+  width: 50px;
+  height: 50px;
 }
 
 .kapil-navbar-image {
@@ -746,8 +942,8 @@
   }
   
   .kapil-navbar-image-slot {
-    width: 55px;
-    height: 55px;
+    width: 45px;
+    height: 45px;
   }
   
   .kapil-logo-title {
@@ -862,8 +1058,8 @@
   }
   
   .kapil-navbar-image-slot {
-    width: 45px;
-    height: 45px;
+    width: 40px;
+    height: 40px;
   }
   
   .kapil-logo-title {
@@ -916,8 +1112,8 @@
   }
   
   .kapil-navbar-image-slot {
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
   }
   
   .kapil-logo-title {
