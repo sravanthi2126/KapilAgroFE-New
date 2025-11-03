@@ -13,6 +13,7 @@
 .payment-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid #e2e8f0;
@@ -22,8 +23,9 @@
   font-size: 28px;
   font-weight: 700;
   color: #1e293b;
-  margin: 0 auto;
+  margin: 0;
   text-align: center;
+  flex: 1;
 }
 
 .back-button {
@@ -44,6 +46,78 @@
 .back-button:hover {
   color: #475569;
   background-color: #f1f5f9;
+}
+
+/* Add More Items Button Styles */
+.add-more-items-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+}
+
+.add-more-items-button:hover {
+  background: linear-gradient(135deg, #15803d, #166534);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(22, 163, 74, 0.3);
+}
+
+.add-more-items-small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-more-items-small:hover {
+  background: #f1f5f9;
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.add-more-items-section {
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 16px;
+}
+
+.add-more-items-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  color: #16a34a;
+  border: 2px solid #16a34a;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.add-more-items-bottom:hover {
+  background: #16a34a;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(22, 163, 74, 0.3);
 }
 
 /* Payment Layout */
@@ -69,6 +143,7 @@
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 16px;
@@ -466,6 +541,11 @@
     margin: 0;
     font-size: 24px;
     align-self: flex-start;
+  }
+  
+  .add-more-items-button {
+    width: 100%;
+    justify-content: center;
   }
   
   .order-summary-card,

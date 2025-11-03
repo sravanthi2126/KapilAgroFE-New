@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { apiClient } from '../../services/authService';
-import { CreditCard, ArrowLeft, MapPin, Package, IndianRupee, CheckCircle } from 'lucide-react';
+import { CreditCard, ArrowLeft, MapPin, Package, IndianRupee, CheckCircle, Plus, ShoppingCart } from 'lucide-react';
 import { FaCreditCard, FaLock } from 'react-icons/fa';
 import './Payment.css';
 
@@ -10,12 +10,8 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get data from location state and parse addresses
-  const { cartItems = [], orderDetails = null, shippingAddress: shippingAddressStr = '{}', billingAddress: billingAddressStr = '{}' } = location.state || {};
-
-  // Parse addresses from JSON strings
-  const shippingAddress = typeof shippingAddressStr === 'string' ? JSON.parse(shippingAddressStr) : shippingAddressStr;
-  const billingAddress = typeof billingAddressStr === 'string' ? JSON.parse(billingAddressStr) : billingAddressStr;
+  // Get data from location state
+  const { cartItems = [], orderDetails = null, shippingAddress = {}, billingAddress = {} } = location.state || {};
 
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentSelected, setPaymentSelected] = useState(false);
@@ -92,6 +88,16 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
       });
     }
   }, [cartItems, orderDetails]);
+
+  // Add this function to handle adding more items
+  const handleAddMoreItems = () => {
+    navigate('/categories', { 
+      state: { 
+        returnTo: '/payment',
+        cartItems: cartItems 
+      } 
+    });
+  };
 
   const loadRazorpayScript = () => {
     return new Promise((resolve, reject) => {
@@ -434,6 +440,15 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
           Back to Address
         </button>
         <h1>Payment</h1>
+        
+        {/* Add More Items Button in Header */}
+        <button 
+          onClick={handleAddMoreItems}
+          className="add-more-items-button"
+        >
+          <Plus size={20} />
+          Add More Items
+        </button>
       </div>
 
       <div className="payment-layout">
@@ -443,6 +458,15 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             <div className="card-header">
               <Package size={20} />
               <h2>Order Summary ({cartItems.length} items)</h2>
+              
+              {/* Add More Items Button in Card Header */}
+              <button 
+                onClick={handleAddMoreItems}
+                className="add-more-items-small"
+              >
+                <ShoppingCart size={16} />
+                Add Items
+              </button>
             </div>
 
             <div className="order-items-list">
@@ -495,6 +519,17 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Add More Items Button at Bottom */}
+            <div className="add-more-items-section">
+              <button 
+                onClick={handleAddMoreItems}
+                className="add-more-items-bottom"
+              >
+                <Plus size={20} />
+                Add More Items to Cart
+              </button>
             </div>
 
             <div className="price-breakdown">
@@ -557,20 +592,11 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 {shippingAddress.firstName} {shippingAddress.lastName}
               </div>
               <div className="address-details">
-                <div className="address-line">
-                  {shippingAddress.addressLine1}
-                </div>
-                {shippingAddress.addressLine2 && (
-                  <div className="address-line">
-                    {shippingAddress.addressLine2}
-                  </div>
-                )}
-                <div className="address-line">
-                  {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}
-                </div>
-                <div className="address-phone">
-                  📱 {shippingAddress.phone}
-                </div>
+                <p>{shippingAddress.addressLine1}</p>
+                {shippingAddress.addressLine2 && <p>{shippingAddress.addressLine2}</p>}
+                <p>{shippingAddress.city}, {shippingAddress.state}</p>
+                <p>Pincode: {shippingAddress.pincode}</p>
+                <p className="address-phone">Phone: {shippingAddress.phone}</p>
               </div>
             </div>
           </div>
@@ -605,33 +631,6 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                   </div>
                 </div>
               </label>
-
-              {/* Uncomment if you want to enable COD
-              <label className={`payment-option ${paymentMethod === 'cod' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="cod"
-                  checked={paymentMethod === 'cod'}
-                  onChange={(e) => {
-                    setPaymentMethod(e.target.value);
-                    setPaymentSelected(true);
-                  }}
-                />
-                <div className="payment-option-content">
-                  <div className="payment-icon">
-                    <Truck size={24} />
-                  </div>
-                  <div className="payment-info">
-                    <span className="payment-title">Cash on Delivery</span>
-                    <span className="payment-desc">Pay when your order arrives</span>
-                  </div>
-                  <div className="payment-check">
-                    <CheckCircle size={20} />
-                  </div>
-                </div>
-              </label>
-              */}
             </div>
 
             {error && <div className="payment-error">{error}</div>}
