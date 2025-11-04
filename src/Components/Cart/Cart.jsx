@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Plus, Minus, Trash2, X, ShoppingBag, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, X, ShoppingBag, Package, ArrowRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { apiClient, validateAndRefreshToken } from '../../services/authService';
 import './Cart.css';
 
 const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
+
   const navigate = useNavigate();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -101,27 +102,9 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
     }
   }, [isCartOpen]);
 
-  useEffect(() => {
-    const handleLoginEvent = () => {
-      if (isCartOpen) {
-        fetchCart();
-      }
-    };
-    const handleOrderPlaced = () => {
-      setCart([]); // Clear cart on successful order
-      fetchCart(); // Refetch to ensure consistency
-    };
-    window.addEventListener('userLoggedIn', handleLoginEvent);
-    window.addEventListener('orderPlaced', handleOrderPlaced);
-    return () => {
-      window.removeEventListener('userLoggedIn', handleLoginEvent);
-      window.removeEventListener('orderPlaced', handleOrderPlaced);
-    };
-  }, [isCartOpen]);
-
-  const updateQuantity = async (cartItemId, quantity) => {
-    if (quantity < 0) return;
-    if (quantity === 0) {
+  const updateQuantity = async (cartItemId, newQuantity) => {
+    if (newQuantity < 0) return;
+    if (newQuantity === 0) {
       await removeItem(cartItemId);
       return;
     }
@@ -137,26 +120,24 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
         return;
       }
 
-      const payload = { quantity: parseInt(quantity) };
+      const payload = { quantity: parseInt(newQuantity) };
       const response = await apiClient.put(`/user/cart/update/${cartItemId}`, payload);
 
       if (response.status === 200 && response.data.status === 'success') {
+        // Update local cart state with new quantity and recalculate prices
         setCart((prev) =>
-          prev.map((item) =>
-            item.cartItemId === cartItemId
-              ? {
+          prev.map((item) => {
+            if (item.cartItemId === cartItemId) {
+              const updatedItem = {
                 ...item,
-                localQuantity: quantity,
-                quantity: quantity,
-                unit_measurement: item.category.toLowerCase() === 'plants' ||
-                  item.product_name.toLowerCase().includes('plant')
-                  ? '1 Plant'
-                  : item.unitMeasurement
-                    ? `${quantity} ${item.unitMeasurement.replace(/^\d+\s*/, '')}`
-                    : null,
-              }
-              : item
-          )
+                localQuantity: newQuantity,
+                quantity: newQuantity,
+              };
+              
+              return updatedItem;
+            }
+            return item;
+          })
         );
         toast.success(response.data.message || 'Cart updated successfully', { autoClose: false });
       } else {
@@ -406,6 +387,11 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
     }
   };
 
+  const handleAddMoreItems = () => {
+    setIsCartOpen(false);
+    navigate('/categories');
+  };
+
   const handleProceed = async () => {
     const isValid = await validateAndRefreshToken();
     if (!isValid) {
@@ -424,7 +410,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
     navigate('/address', { state: { cartItems: cart } });
   };
 
-
+  const cartItemCount1 = cart.reduce((total, item) => total + (item.localQuantity || 0), 0);
   const cartItemCount = cart.length;
   const totalPrice = cart.reduce(
     (sum, item) => sum + (item.after_discount_price || item.price || 0) * (item.localQuantity || 0),
@@ -490,25 +476,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
                   <Package size={80} className="kapil-cart-empty-icon" />
                   <h4>Your cart is empty</h4>
                   <p>Add some delicious products to get started!</p>
-                  <button
-                    onClick={() => {
-                      setIsCartOpen(false);
-                      const currentPath = window.location.pathname;
-
-                      if (currentPath.startsWith('/products')) {
-                        // If user is on product detail page, go back to categories
-                        navigate('/categories');
-                      } else if (currentPath === '/') {
-                        // If user is on home page, scroll to categories section
-                        navigate('/categories');
-                      } else {
-                        // If already on categories, just close cart
-                        // Optional: scroll to top of categories
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }
-                    }}
-                    className="kapil-cart-continue"
-                  >
+                  <button onClick={handleAddMoreItems} className="kapil-cart-continue">
                     Continue Shopping
                   </button>
                 </div>
@@ -595,24 +563,23 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
 
                             {(item.category.toLowerCase() === 'plants' ||
                               item.product_name.toLowerCase().includes('plant')) && (
-                                <div className="kapil-cart-item-age">
-                                  <label htmlFor={`plantAge-${item.cartItemId}`} className="kapil-cart-item-age-label">
-                                    Plant Age:
-                                  </label>
-                                  <select
-                                    id={`plantAge-${item.cartItemId}`}
-                                    className="kapil-cart-item-age-select"
-                                    value={item.plant_age || '1'}
-                                    onChange={(e) =>
-                                      updatePlantAge(item.cartItemId, item.productId, e.target.value)
-                                    }
-                                    disabled={updatingItems.has(item.cartItemId)}
-                                  >
-                                    <option value="1">1 Year</option>
-
-                                  </select>
-                                </div>
-                              )}
+                              <div className="kapil-cart-item-age">
+                                <label htmlFor={`plantAge-${item.cartItemId}`} className="kapil-cart-item-age-label">
+                                  Plant Age:
+                                </label>
+                                <select
+                                  id={`plantAge-${item.cartItemId}`}
+                                  className="kapil-cart-item-age-select"
+                                  value={item.plant_age || '1'}
+                                  onChange={(e) =>
+                                    updatePlantAge(item.cartItemId, item.productId, e.target.value)
+                                  }
+                                  disabled={updatingItems.has(item.cartItemId)}
+                                >
+                                  <option value="1">1 Year</option>
+                                </select>
+                              </div>
+                            )}
 
                             <div className="kapil-cart-item-total">
                               Total: <span className="kapil-cart-item-total-amount">₹{itemTotal.toFixed(2)}</span>
@@ -676,7 +643,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
               <div className="kapil-cart-footer">
                 <div className="kapil-cart-summary">
                   <div className="kapil-cart-total">
-                    <span>Subtotal ({cartItemCount} items):</span>
+                    <span>Subtotal ({cartItemCount} Items, {cartItemCount1} Quantities)</span>
                     <span className="kapil-cart-total-amount">₹{totalPrice.toFixed(2)}</span>
                   </div>
                   {totalSavings > 0 && (
@@ -687,6 +654,15 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
                     </div>
                   )}
                 </div>
+
+                {/* Add More Items Button */}
+                <button
+                  onClick={handleAddMoreItems}
+                  className="kapil-cart-add-more"
+                >
+                  <Plus size={20} />
+                  Add More Items
+                </button>
 
                 <div className="kapil-cart-terms">
                   <input type="checkbox" id="terms-checkbox" checked={true} readOnly />
@@ -703,6 +679,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
                   disabled={cartItemCount === 0}
                 >
                   Proceed to Address
+                  <ArrowRight size={18} />
                 </button>
               </div>
             )}
