@@ -529,6 +529,31 @@
   border: 1px solid #bbf7d0;
 }
 
+/* Add More Items Button */
+.kapil-cart-add-more {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  color: #16a34a;
+  border: 2px solid #16a34a;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.kapil-cart-add-more:hover {
+  background: #16a34a;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(22, 163, 74, 0.3);
+}
+
 /* Terms */
 .kapil-cart-terms {
   display: flex;
@@ -579,6 +604,10 @@
   letter-spacing: 0.05em;
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .kapil-cart-checkout::before {
@@ -746,6 +775,11 @@
   .kapil-cart-checkout {
     padding: 16px 24px;
     font-size: 16px;
+  }
+
+  .kapil-cart-add-more {
+    padding: 10px 16px;
+    font-size: 14px;
   }
 }
 
