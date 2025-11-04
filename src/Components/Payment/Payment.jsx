@@ -479,13 +479,13 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 </button>
                 <h1>Payment</h1>
 
-                <button
+                {/* <button
                     onClick={handleAddMoreItems}
                     className="add-more-items-button"
                 >
                     <Plus size={20} />
                     Add More Items
-                </button>
+                </button> */}
             </div>
 
             <div className="payment-layout">
