@@ -33,27 +33,51 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Use the live cart prop instead of location.state.cartItems
     const { orderDetails: initialOrderDetails = null, shippingAddress = {}, billingAddress = {} } = location.state || {};
 
-    const [paymentMethod, setPaymentMethod] = useState('');
-    const [paymentSelected, setPaymentSelected] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState('razorpay');
+    const [paymentSelected, setPaymentSelected] = useState(true);
     const [loading, setLoading] = useState(false);
     const [fetchingShipping, setFetchingShipping] = useState(false);
     const [error, setError] = useState('');
-    const [currentOrderDetails, setCurrentOrderDetails] = useState(initialOrderDetails);
+    const [currentOrderDetails, setCurrentOrderDetails] = useState(null);
 
-    // Calculate cart totals from live cart
+    // Calculate cart totals
     const cartTotals = useMemo(() => calculateCartTotals(cart), [cart]);
 
-    // Recalculate shipping and totals when cart changes
+    // Initialize order details
+    useEffect(() => {
+        if (cart.length === 0) {
+            setError('No items in cart. Please add items to proceed.');
+            return;
+        }
+
+        if (initialOrderDetails) {
+            setCurrentOrderDetails({
+                ...initialOrderDetails,
+                shippingcharges: initialOrderDetails.shippingAmount || 0,
+                tempOrderId: initialOrderDetails.tempOrderId || null, // Preserve tempOrderId if passed
+            });
+        } else {
+            const { originalAmount, subtotalAmount, productDiscountAmount } = cartTotals;
+            const basicOrderDetails = {
+                originalAmount,
+                subtotalAmount,
+                productDiscountAmount,
+                shippingcharges: 0,
+                orderDiscountAmount: 0,
+                totalTaxAmount: 0,
+                totalAmount: subtotalAmount,
+                orderId: `temp-${Date.now()}`,
+                tempOrderId: null, // Will be set after /initiate
+            };
+            setCurrentOrderDetails(basicOrderDetails);
+        }
+    }, [cart.length, initialOrderDetails, cartTotals]);
+
+    // Recalculate shipping & totals
     const recalculateOrderDetails = useCallback(async () => {
         if (!shippingAddress?.pincode || cart.length === 0) {
-            setCurrentOrderDetails(prev => ({
-                ...prev,
-                shippingcharges: 0,
-                totalAmount: (parseFloat(prev?.subtotalAmount || 0) + parseFloat(prev?.totalTaxAmount || 0) - parseFloat(prev?.orderDiscountAmount || 0)).toFixed(2)
-            }));
             return;
         }
 
@@ -62,6 +86,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
+                setFetchingShipping(false);
                 return;
             }
 
@@ -72,7 +97,6 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 cartItemIds: cart.map((item) => item.cartItemId),
             };
 
-            // Recalculate shipping with updated cart
             const response = await apiClient.post('/user/orders/initiate', payload, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -82,10 +106,12 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
             if (response.status === 201 && response.data.status === 'success') {
                 const newDetails = response.data.data;
-                setCurrentOrderDetails({
+                setCurrentOrderDetails(prev => ({
+                    ...prev,
                     ...newDetails,
-                    shippingcharges: newDetails.shippingAmount,
-                });
+                    tempOrderId: newDetails.tempOrderId, // CRITICAL: Save tempOrderId
+                    shippingcharges: newDetails.shippingAmount || 0,
+                }));
                 setError('');
             } else {
                 throw new Error(response.data?.message || 'Failed to re-calculate order details');
@@ -102,62 +128,42 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         }
     }, [cart, shippingAddress, billingAddress]);
 
-    // Update UI when cart changes
+    // Update totals when cart changes
     useEffect(() => {
-        if (!currentOrderDetails) return;
+        if (!currentOrderDetails || cart.length === 0) return;
 
         const { originalAmount, subtotalAmount, productDiscountAmount } = cartTotals;
-        
-        const shippingCharges = parseFloat(currentOrderDetails.shippingcharges || currentOrderDetails.shippingAmount || 0);
+        const shippingCharges = parseFloat(currentOrderDetails.shippingcharges || 0);
         const orderDiscountAmount = parseFloat(currentOrderDetails.orderDiscountAmount || 0);
         const totalTaxAmount = parseFloat(currentOrderDetails.totalTaxAmount || 0);
 
         let calculatedTotal = parseFloat(subtotalAmount) - orderDiscountAmount + shippingCharges + totalTaxAmount;
-        
+
         setCurrentOrderDetails(prevDetails => ({
             ...prevDetails,
             originalAmount: originalAmount,
             subtotalAmount: subtotalAmount,
             productDiscountAmount: productDiscountAmount,
-            shippingcharges: shippingCharges, 
+            shippingcharges: shippingCharges,
             orderDiscountAmount: orderDiscountAmount,
-            totalTaxAmount: totalTaxAmount, 
+            totalTaxAmount: totalTaxAmount,
             totalAmount: calculatedTotal.toFixed(2),
         }));
+    }, [cart, cartTotals]);
 
-    }, [cart, cartTotals, currentOrderDetails?.shippingcharges, currentOrderDetails?.orderDiscountAmount]);
-    
-    // Recalculate shipping when cart changes
+    // Recalculate on cart or pincode change
     useEffect(() => {
         if (cart.length > 0 && shippingAddress?.pincode) {
             recalculateOrderDetails();
         }
-    }, [cart.length, recalculateOrderDetails]);
-
-    // Initial setup
-    useEffect(() => {
-        if (cart.length === 0) {
-            setError('No items in cart. Please add items to proceed.');
-            return;
-        }
-
-        if (!initialOrderDetails) {
-            setError('Order details not found. Please go back and try again.');
-            return;
-        }
-        
-        setCurrentOrderDetails(prevDetails => ({
-            ...initialOrderDetails,
-            shippingcharges: initialOrderDetails.shippingAmount,
-        }));
-    }, []);
+    }, [cart.length, shippingAddress?.pincode, recalculateOrderDetails]);
 
     const handleAddMoreItems = () => {
-        navigate('/categories', { 
-            state: { 
+        navigate('/categories', {
+            state: {
                 returnTo: '/payment',
                 preserveCart: true
-            } 
+            }
         });
     };
 
@@ -184,6 +190,22 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 throw new Error('Razorpay SDK failed to load. Please refresh and try again.');
             }
 
+            if (!orderData.razorpayOrderId) {
+                const token = localStorage.getItem('token');
+                const createOrderResponse = await apiClient.post('/user/orders/create-razorpay-order', {
+                    amount: Math.round(parseFloat(orderData.totalAmount) * 100),
+                    currency: 'INR'
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (createOrderResponse.data.status === 'success') {
+                    orderData.razorpayOrderId = createOrderResponse.data.data.id;
+                }
+            }
+
             return new Promise((resolve, reject) => {
                 const options = {
                     key: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_OCmyT47D47k8rb',
@@ -202,7 +224,6 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                             razorpayOrderId: response.razorpay_order_id,
                             razorpayPaymentId: response.razorpay_payment_id,
                             razorpaySignature: response.razorpay_signature,
-                            orderId: orderData.tempOrderId || orderData.orderId,
                             amount: parseFloat(orderData.totalAmount)
                         });
                     },
@@ -227,15 +248,22 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
     const verifyPayment = async (paymentData) => {
         try {
             console.log('Verifying payment with data:', paymentData);
+
+            // CRITICAL: Ensure tempOrderId is present
+            if (!paymentData.orderId) {
+                throw new Error('Order session expired. Please restart checkout.');
+            }
+
             const token = localStorage.getItem('token');
             const payload = {
                 razorpayOrderId: paymentData.razorpayOrderId,
                 razorpayPaymentId: paymentData.razorpayPaymentId,
                 razorpaySignature: paymentData.razorpaySignature,
                 amount: paymentData.amount.toString(),
-                orderId: paymentData.orderId,
+                orderId: paymentData.orderId, // tempOrderId
             };
-            console.log('Payload sent to backend:', payload);
+
+            console.log('Sending to /payment/success:', payload);
 
             const response = await apiClient.post('/user/orders/payment/success', payload, {
                 headers: {
@@ -247,68 +275,26 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             if (response.data.status === 'success') {
                 const permanentOrderId = response.data.data.orderId;
                 const invoiceId = response.data.data.invoiceId;
+
                 if (!permanentOrderId) {
                     throw new Error('Permanent order ID not found in response');
                 }
 
-                console.log('Permanent orderId from payment/success:', permanentOrderId);
-                console.log('InvoiceId from payment/success:', invoiceId);
-
-                let orderDetails = null;
-                try {
-                    const orderResponse = await apiClient.get(`/user/orders/${permanentOrderId}`, {
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`,
-                        },
-                    });
-
-                    if (orderResponse.data.status === 'success') {
-                        orderDetails = orderResponse.data.data;
-                    }
-                } catch (fetchError) {
-                    console.error('Error fetching order with orderId:', permanentOrderId, fetchError);
-                    const ordersResponse = await apiClient.get('/user/orders', {
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`,
-                        },
-                    });
-
-                    if (ordersResponse.data.status === 'success' && ordersResponse.data.data.length > 0) {
-                        const latestOrder = ordersResponse.data.data.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt))[0];
-                        orderDetails = latestOrder;
-                        console.log('Fallback to latest orderId:', permanentOrderId);
-                    } else {
-                        throw new Error('No orders found for user');
-                    }
-                }
-
-                if (orderDetails) {
-                    return {
-                        success: true,
-                        message: response.data.message,
-                        shipway_status: response.data.shipway_status || 'success',
-                        orderDetails: {
-                            orderId: orderDetails.orderId,
-                            invoiceId: invoiceId,
-                            razorpayOrderId: paymentData.razorpayOrderId,
-                            razorpayPaymentId: paymentData.razorpayPaymentId,
-                            totalAmount: orderDetails.totalAmount,
-                            paymentMethod: orderDetails.paymentMethod || 'Online Payment (Razorpay)',
-                            paymentStatus: orderDetails.paymentStatus || 'Success',
-                            orderDate: orderDetails.orderDate || new Date().toISOString(),
-                            shippingcharges: orderDetails.shippingAmount,
-                            subtotalAmount: orderDetails.subtotalAmount,
-                            originalAmount: orderDetails.originalAmount,
-                            productDiscountAmount: orderDetails.productDiscountAmount,
-                            orderDiscountAmount: orderDetails.orderDiscountAmount,
-                            totalTaxAmount: orderDetails.totalTaxAmount,
-                        },
-                    };
-                } else {
-                    throw new Error('Failed to fetch updated order details');
-                }
+                return {
+                    success: true,
+                    message: response.data.message,
+                    shipway_status: response.data.shipway_status || 'success',
+                    orderDetails: {
+                        orderId: permanentOrderId,
+                        invoiceId: invoiceId,
+                        razorpayOrderId: paymentData.razorpayOrderId,
+                        razorpayPaymentId: paymentData.razorpayPaymentId,
+                        totalAmount: paymentData.amount,
+                        paymentMethod: 'Online Payment (Razorpay)',
+                        paymentStatus: 'Success',
+                        orderDate: new Date().toISOString(),
+                    },
+                };
             } else {
                 throw new Error(response.data?.message || 'Payment verification failed');
             }
@@ -322,7 +308,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
     };
 
     const navigateToOrderConfirmation = (orderData, successMessage) => {
-        console.log('Navigating to order confirmation with orderId:', orderData.orderDetails?.orderId || orderData.orderId);
+        console.log('Navigating to order confirmation with orderId:', orderData.orderDetails?.orderId);
         setCart([]);
         toast.success(successMessage, {
             position: 'bottom-right',
@@ -333,8 +319,9 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             draggable: true,
         });
 
-        const orderId = orderData.orderDetails?.orderId || orderData.orderId;
+        const orderId = orderData.orderDetails?.orderId;
         const invoiceId = orderData.orderDetails?.invoiceId;
+
         if (!orderId) {
             console.error('No orderId found for navigation');
             toast.error('Order ID not found. Please contact support.', {
@@ -344,34 +331,29 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             return;
         }
 
-        try {
-            navigate('/order-confirmation', {
-                state: {
-                    orderId: orderId,
-                    invoiceId: invoiceId,
-                    cartItems: cart, // Use live cart
-                    orderDetails: orderData.orderDetails || orderData,
-                    shippingAddress,
-                    billingAddress,
-                    orderSummary: {
-                        subtotal: parseFloat(currentOrderDetails.subtotalAmount || 0),
-                        originalAmount: parseFloat(currentOrderDetails.originalAmount || 0),
-                        productDiscountAmount: parseFloat(currentOrderDetails.productDiscountAmount || 0),
-                        orderDiscountAmount: parseFloat(currentOrderDetails.orderDiscountAmount || 0),
-                        shippingCharges: parseFloat(currentOrderDetails.shippingcharges || 0),
-                        taxes: parseFloat(currentOrderDetails.totalTaxAmount || 0),
-                        total: parseFloat(currentOrderDetails.totalAmount || 0),
-                    },
+        navigate('/order-confirmation', {
+            state: {
+                orderId: orderId,
+                invoiceId: invoiceId,
+                cartItems: cart,
+                orderDetails: orderData.orderDetails,
+                shippingAddress,
+                billingAddress,
+                orderSummary: {
+                    subtotal: parseFloat(currentOrderDetails?.subtotalAmount || 0),
+                    originalAmount: parseFloat(currentOrderDetails?.originalAmount || 0),
+                    productDiscountAmount: parseFloat(currentOrderDetails?.productDiscountAmount || 0),
+                    orderDiscountAmount: parseFloat(currentOrderDetails?.orderDiscountAmount || 0),
+                    shippingCharges: parseFloat(currentOrderDetails?.shippingcharges || 0),
+                    taxes: parseFloat(currentOrderDetails?.totalTaxAmount || 0),
+                    total: parseFloat(currentOrderDetails?.totalAmount || 0),
                 },
-            });
-        } catch (navError) {
-            console.error('Navigation error:', navError);
-            window.location.href = '/order-confirmation';
-        }
+            },
+        });
     };
 
     const handlePlaceOrder = async () => {
-        if (!currentOrderDetails || !currentOrderDetails.orderId) {
+        if (!currentOrderDetails) {
             setError('Order details not found. Please go back and try again.');
             toast.error('Order details not found. Please go back and try again.', {
                 position: 'bottom-right',
@@ -379,10 +361,19 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             });
             return;
         }
-        
+
+        if (!currentOrderDetails.tempOrderId) {
+            setError('Order session expired. Please restart checkout from cart.');
+            toast.error('Order session expired. Please go back to cart and try again.', {
+                position: 'bottom-right',
+                autoClose: 5000,
+            });
+            return;
+        }
+
         if (parseFloat(currentOrderDetails.totalAmount) <= 0) {
-             setError('Total amount is zero or less. Cannot proceed with payment.');
-             toast.error('Cannot place order with zero total amount.', {
+            setError('Total amount is zero or less. Cannot proceed with payment.');
+            toast.error('Cannot place order with zero total amount.', {
                 position: 'bottom-right',
                 autoClose: 5000,
             });
@@ -393,33 +384,27 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         setError('');
 
         try {
-            if (paymentMethod === 'cod') {
-                throw new Error('Cash on Delivery (COD) is not currently enabled for this order.');
-            } else {
-                const paymentData = await handleRazorpayPayment(currentOrderDetails);
-                const verificationResult = await verifyPayment({
-                    razorpayOrderId: paymentData.razorpayOrderId,
-                    razorpayPaymentId: paymentData.razorpayPaymentId,
-                    razorpaySignature: paymentData.razorpaySignature,
-                    amount: paymentData.amount,
-                    orderId: paymentData.orderId,
-                });
+            const paymentData = await handleRazorpayPayment(currentOrderDetails);
 
-                if (verificationResult.success) {
-                    let successMessage = 'Payment Successful! Your order has been placed.';
-                    if (verificationResult.shipway_status === 'pending') {
-                        successMessage = 'Payment Successful! Shipping details are being processed.';
-                        setTimeout(() => {
-                            toast.warning('Shipping details are being processed. You will receive tracking information shortly.', {
-                                position: 'bottom-right',
-                                autoClose: 7000,
-                            });
-                        }, 2000);
-                    }
-                    navigateToOrderConfirmation(verificationResult, successMessage);
-                } else {
-                    throw new Error('Payment verification failed');
+            // CRITICAL: Attach tempOrderId to paymentData
+            paymentData.orderId = currentOrderDetails.tempOrderId;
+
+            const verificationResult = await verifyPayment(paymentData);
+
+            if (verificationResult.success) {
+                let successMessage = 'Payment Successful! Your order has been placed.';
+                if (verificationResult.shipway_status === 'pending') {
+                    successMessage = 'Payment Successful! Shipping details are being processed.';
+                    setTimeout(() => {
+                        toast.warning('Shipping details are being processed. You will receive tracking information shortly.', {
+                            position: 'bottom-right',
+                            autoClose: 7000,
+                        });
+                    }, 2000);
                 }
+                navigateToOrderConfirmation(verificationResult, successMessage);
+            } else {
+                throw new Error('Payment verification failed');
             }
         } catch (error) {
             console.error('Order placement error:', {
@@ -439,11 +424,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 toast.error(errorMessage, { position: 'bottom-right', autoClose: 5000 });
             } else if (error.response?.status === 400) {
                 errorMessage = 'Invalid Order ID or payment details. Please check your order history or try again.';
-                toast.error(errorMessage, {
-                    position: 'bottom-right',
-                    autoClose: 5000,
-                    onClick: () => navigate('/orders'),
-                });
+                toast.error(errorMessage, { position: 'bottom-right', autoClose: 5000 });
             } else if (error.response?.status === 401 || error.response?.status === 403) {
                 errorMessage = 'Session expired. Please log in again';
                 localStorage.removeItem('token');
@@ -483,7 +464,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                     <h1>Payment</h1>
                 </div>
                 <div className="payment-error">
-                    Order details not found. Please go back and try again.
+                    Loading order details...
                 </div>
             </div>
         );
@@ -497,8 +478,8 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                     Back to Address
                 </button>
                 <h1>Payment</h1>
-                
-                <button 
+
+                <button
                     onClick={handleAddMoreItems}
                     className="add-more-items-button"
                 >
@@ -557,10 +538,6 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                                                         </div>
                                                     )}
 
-                                                    <div className="payment-cart-item-quantity-display">
-                                                        Per Each Item: 
-                                                    </div>
-
                                                     <div className="payment-cart-item-price">
                                                         {hasDiscount ? (
                                                             <>
@@ -605,7 +582,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                         </div>
 
                         <div className="add-more-items-section">
-                            <button 
+                            <button
                                 onClick={handleAddMoreItems}
                                 className="add-more-items-bottom"
                             >
@@ -720,12 +697,10 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                         <button
                             onClick={handlePlaceOrder}
                             className="place-order-button"
-                            disabled={loading || cart.length === 0 || fetchingShipping || !paymentSelected || parseFloat(currentOrderDetails.totalAmount) <= 0}
+                            disabled={loading || cart.length === 0 || fetchingShipping || parseFloat(currentOrderDetails.totalAmount) <= 0}
                         >
                             {loading ? (
                                 <div className="payment-spinner"></div>
-                            ) : !paymentSelected ? (
-                                "Select Payment Method"
                             ) : (
                                 <>
                                     <IndianRupee size={20} />
