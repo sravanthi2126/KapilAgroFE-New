@@ -5,7 +5,6 @@
   box-sizing: border-box;
 }
 
-
 /* Force navbar exact height */
 .kapil-navbar {
   height: 68px !important;
@@ -161,17 +160,38 @@
   }
 }
 
-/* Mobile menu positioning */
+/* ================================================
+   MOBILE MENU FIXES
+   ================================================ */
+
+/* Fix mobile menu display */
 .kapil-navbar-mobile-menu {
+  position: fixed !important;
   top: 68px !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(10px) !important;
+  animation: slideDown 0.3s ease-out !important;
+  z-index: 998 !important;
+  display: none !important;
+  flex-direction: column !important;
+  padding: 1rem 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  transform: translateX(0) !important;
 }
 
-@media (min-width: 1400px) {
-  .kapil-navbar-mobile-menu {
-    top: 70px !important;
-  }
+/* Force display when open */
+.kapil-navbar-mobile-menu[style*="display: flex"],
+.kapil-navbar-mobile-menu.show-mobile-menu {
+  display: flex !important;
 }
 
+/* Mobile menu positioning adjustments */
 @media (max-width: 1399px) {
   .kapil-navbar-mobile-menu {
     top: 62px !important;
@@ -190,16 +210,16 @@
   }
 }
 
+/* Ensure mobile menu is hidden on desktop */
+@media (min-width: 993px) {
+  .kapil-navbar-mobile-menu {
+    display: none !important;
+  }
+}
+
 /* ================================================
    ORIGINAL NAVBAR STYLES BELOW
    ================================================ */
-
-/* Reset and base styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
 
 /* Main navbar container */
 .kapil-navbar {
@@ -641,27 +661,7 @@
   height: 24px;
 }
 
-/* Mobile menu */
-.kapil-navbar-mobile-menu {
-  position: fixed;
-  top: 55px;
-  left: 0;
-  right: 0;
-  width: 100vw;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-bottom: 2px solid #e2e8f0;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(10px);
-  animation: slideDown 0.3s ease-out;
-  z-index: 998;
-  display: none;
-  flex-direction: column;
-  padding: 1rem 0;
-  margin: 0;
-  box-sizing: border-box;
-  transform: translateX(0);
-}
-
+/* Mobile menu content */
 .kapil-mobile-menu-content {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -1017,17 +1017,6 @@
     display: none;
   }
   
-  .kapil-navbar-mobile-menu {
-    position: fixed;
-    top: 60px;
-    left: 0;
-    right: 0;
-    width: 100vw;
-    margin: 0;
-    padding: 1rem 0;
-    display: none;
-  }
-  
   .kapil-mobile-menu-content {
     padding: 0.75rem 1rem;
     margin: 0;
@@ -1086,10 +1075,6 @@
     height: 20px;
   }
   
-  .kapil-navbar-mobile-menu {
-    top: 57px;
-  }
-  
   .kapil-mobile-menu-item,
   .kapil-mobile-menu-cart,
   .kapil-mobile-menu-login,
@@ -1138,10 +1123,6 @@
   .kapil-navbar-wishlist svg {
     width: 18px;
     height: 18px;
-  }
-  
-  .kapil-navbar-mobile-menu {
-    top: 55px;
   }
   
   .kapil-mobile-menu-content {

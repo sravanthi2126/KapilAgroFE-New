@@ -391,9 +391,16 @@
   font-weight: 600;
 }
 
+/* Cart Item Total Amount - Make it green */
 .kapil-cart-item-total-amount {
-  color: #1e293b;
-  font-weight: 700;
+  color: #16a34a;
+  font-weight: 800;
+  font-size: 15px;
+}
+/* Savings text color */
+.kapil-cart-item-total span[style*="color: #16a34a"] {
+  font-weight: 600;
+  font-size: 13px;
 }
 
 /* Cart Item Controls */
@@ -405,15 +412,7 @@
   flex-shrink: 0;
 }
 
-.kapil-cart-item-remove {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 12px;
-  transition: all 0.2s ease;
-}
+
 
 .kapil-cart-item-remove:hover:not(:disabled) {
   background: #fee2e2;
@@ -427,15 +426,16 @@
 }
 
 /* Quantity Controls */
-.kapil-cart-item-quantity {
+.kapil-cart-item-controls {
   display: flex;
-  align-items: center;
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center; /* Add this for vertical centering */
+  gap: 16px;
+  flex-shrink: 0;
+  align-self: center; /* This ensures it centers within the flex container */
 }
+
 
 .kapil-cart-item-quantity-btn {
   background: #f8fafc;
@@ -449,14 +449,36 @@
   justify-content: center;
 }
 
+/* Special styles for delete button (when quantity is 1) */
+.kapil-cart-item-quantity-btn.delete-btn {
+  background: #fef2f2;
+  color: #dc2626;
+  border: none;
+}
+
+
 .kapil-cart-item-quantity-btn:hover:not(:disabled) {
-  background: #16a34a;
+  background: #ef4444;
   color: white;
+    transform: scale(1.05);
+
 }
 
 .kapil-cart-item-quantity-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Increase quantity button - always green */
+.kapil-cart-item-quantity-btn:last-child {
+  background: #dcfce7; /* Light green background */
+  color: #16a34a; /* Green color */
+}
+
+.kapil-cart-item-quantity-btn:last-child:hover:not(:disabled) {
+  background: #16a34a; /* Dark green on hover */
+  color: white;
+  transform: scale(1.05);
 }
 
 .kapil-cart-item-quantity-value {
@@ -472,6 +494,16 @@
   background: white;
 }
 
+.kapil-cart-item-quantity {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  align-self: center; /* Add this line */
+}
 /* Cart Footer */
 .kapil-cart-footer {
   padding: 28px 24px;
@@ -529,6 +561,31 @@
   border: 1px solid #bbf7d0;
 }
 
+/* Add More Items Button */
+.kapil-cart-add-more {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  color: #16a34a;
+  border: 2px solid #16a34a;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.kapil-cart-add-more:hover {
+  background: #16a34a;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(22, 163, 74, 0.3);
+}
+
 /* Terms */
 .kapil-cart-terms {
   display: flex;
@@ -579,6 +636,10 @@
   letter-spacing: 0.05em;
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .kapil-cart-checkout::before {
@@ -747,6 +808,11 @@
     padding: 16px 24px;
     font-size: 16px;
   }
+
+  .kapil-cart-add-more {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -780,7 +846,7 @@
     gap: 16px;
   }
 
-  .kapil-cart-item-controls {
+   .kapil-cart-item-controls {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
@@ -804,5 +870,8 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+   .kapil-cart-item-quantity {
+    order: 1;
   }
 }

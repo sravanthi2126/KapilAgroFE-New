@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Plus, Minus, Trash2, X, ShoppingBag, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, X, ShoppingBag, Package, ArrowRight } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { Link } from "react-router-dom";
 import 'react-toastify/dist/ReactToastify.css';
 import { apiClient, validateAndRefreshToken } from '../../services/authService';
 import './Cart.css';
+import TermsAndConditions from "../QuickLinks/TermsAndConditions";
+import PrivacyPolicy from "../QuickLinks/PrivacyPolicy";
+import RefundPolicy from "../QuickLinks/RefundPolicy";
+
 
 const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
   const navigate = useNavigate();
@@ -12,6 +17,10 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [updatingItems, setUpdatingItems] = useState(new Set());
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isRefundOpen, setIsRefundOpen] = useState(false);
+
 
   const fetchCart = async () => {
     setIsLoading(true);
@@ -101,27 +110,9 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
     }
   }, [isCartOpen]);
 
-  useEffect(() => {
-    const handleLoginEvent = () => {
-      if (isCartOpen) {
-        fetchCart();
-      }
-    };
-    const handleOrderPlaced = () => {
-      setCart([]); // Clear cart on successful order
-      fetchCart(); // Refetch to ensure consistency
-    };
-    window.addEventListener('userLoggedIn', handleLoginEvent);
-    window.addEventListener('orderPlaced', handleOrderPlaced);
-    return () => {
-      window.removeEventListener('userLoggedIn', handleLoginEvent);
-      window.removeEventListener('orderPlaced', handleOrderPlaced);
-    };
-  }, [isCartOpen]);
-
-  const updateQuantity = async (cartItemId, quantity) => {
-    if (quantity < 0) return;
-    if (quantity === 0) {
+  const updateQuantity = async (cartItemId, newQuantity) => {
+    if (newQuantity < 0) return;
+    if (newQuantity === 0) {
       await removeItem(cartItemId);
       return;
     }
@@ -137,26 +128,24 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
         return;
       }
 
-      const payload = { quantity: parseInt(quantity) };
+      const payload = { quantity: parseInt(newQuantity) };
       const response = await apiClient.put(`/user/cart/update/${cartItemId}`, payload);
 
       if (response.status === 200 && response.data.status === 'success') {
+        // Update local cart state with new quantity and recalculate prices
         setCart((prev) =>
-          prev.map((item) =>
-            item.cartItemId === cartItemId
-              ? {
+          prev.map((item) => {
+            if (item.cartItemId === cartItemId) {
+              const updatedItem = {
                 ...item,
-                localQuantity: quantity,
-                quantity: quantity,
-                unit_measurement: item.category.toLowerCase() === 'plants' ||
-                  item.product_name.toLowerCase().includes('plant')
-                  ? '1 Plant'
-                  : item.unitMeasurement
-                    ? `${quantity} ${item.unitMeasurement.replace(/^\d+\s*/, '')}`
-                    : null,
-              }
-              : item
-          )
+                localQuantity: newQuantity,
+                quantity: newQuantity,
+              };
+
+              return updatedItem;
+            }
+            return item;
+          })
         );
         toast.success(response.data.message || 'Cart updated successfully', { autoClose: false });
       } else {
@@ -406,25 +395,32 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
     }
   };
 
-  const handleProceed = async () => {
-    const isValid = await validateAndRefreshToken();
-    if (!isValid) {
-      toast.info('Please log in to proceed to address', {
-        autoClose: 5000,
-        onClick: () => setIsLoginOpen(true),
-      });
-      return;
-    }
-    if (cart.length === 0) {
-      toast.error('Your cart is empty', { autoClose: false });
-      return;
-    }
+  const handleAddMoreItems = () => {
     setIsCartOpen(false);
-    if (setIsMobileMenuOpen) setIsMobileMenuOpen(false); // <- close mobile menu if open
-    navigate('/address', { state: { cartItems: cart } });
+    navigate('/categories');
   };
+const handleProceed = async () => {
+  const isValid = await validateAndRefreshToken();
+  if (!isValid) {
+    toast.info('Please log in to proceed to address', {
+      autoClose: 5000,
+      onClick: () => setIsLoginOpen(true),
+    });
+    return;
+  }
+  if (cart.length === 0) {
+    toast.error('Your cart is empty', { autoClose: false });
+    return;
+  }
+  
+  // Close the cart modal automatically when proceeding to address
+  setIsCartOpen(false);
+  
+  if (setIsMobileMenuOpen) setIsMobileMenuOpen(false); // <- close mobile menu if open
+  navigate('/address', { state: { cartItems: cart } });
+};
 
-
+  const cartItemCount1 = cart.reduce((total, item) => total + (item.localQuantity || 0), 0);
   const cartItemCount = cart.length;
   const totalPrice = cart.reduce(
     (sum, item) => sum + (item.after_discount_price || item.price || 0) * (item.localQuantity || 0),
@@ -490,25 +486,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
                   <Package size={80} className="kapil-cart-empty-icon" />
                   <h4>Your cart is empty</h4>
                   <p>Add some delicious products to get started!</p>
-                  <button
-                    onClick={() => {
-                      setIsCartOpen(false);
-                      const currentPath = window.location.pathname;
-
-                      if (currentPath.startsWith('/products')) {
-                        // If user is on product detail page, go back to categories
-                        navigate('/categories');
-                      } else if (currentPath === '/') {
-                        // If user is on home page, scroll to categories section
-                        navigate('/categories');
-                      } else {
-                        // If already on categories, just close cart
-                        // Optional: scroll to top of categories
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }
-                    }}
-                    className="kapil-cart-continue"
-                  >
+                  <button onClick={handleAddMoreItems} className="kapil-cart-continue">
                     Continue Shopping
                   </button>
                 </div>
@@ -609,7 +587,6 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
                                     disabled={updatingItems.has(item.cartItemId)}
                                   >
                                     <option value="1">1 Year</option>
-
                                   </select>
                                 </div>
                               )}
@@ -625,46 +602,39 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
                           </div>
                         </div>
 
-                        <div className="kapil-cart-item-controls">
-                          <button
-                            onClick={() => removeItem(item.cartItemId)}
-                            className="kapil-cart-item-remove"
-                            title="Remove item"
-                            disabled={updatingItems.has(item.cartItemId)}
-                          >
-                            {updatingItems.has(item.cartItemId) ? (
-                              <div className="kapil-cart-mini-spinner"></div>
-                            ) : (
-                              <Trash2 size={16} />
-                            )}
-                          </button>
-
-                          <div className="kapil-cart-item-quantity">
-                            <button
-                              onClick={() => updateQuantity(item.cartItemId, item.localQuantity - 1)}
-                              className="kapil-cart-item-quantity-btn"
-                              disabled={updatingItems.has(item.cartItemId)}
-                              title={item.localQuantity === 1 ? 'Remove item' : 'Decrease quantity'}
-                            >
-                              {item.localQuantity === 1 ? <Trash2 size={16} /> : <Minus size={16} />}
-                            </button>
-                            <span className="kapil-cart-item-quantity-value">
-                              {updatingItems.has(item.cartItemId) ? (
-                                <div className="kapil-cart-mini-spinner"></div>
-                              ) : (
-                                item.localQuantity
-                              )}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(item.cartItemId, item.localQuantity + 1)}
-                              className="kapil-cart-item-quantity-btn"
-                              disabled={updatingItems.has(item.cartItemId)}
-                              title="Increase quantity"
-                            >
-                              <Plus size={16} />
-                            </button>
-                          </div>
-                        </div>
+                     <div className="kapil-cart-item-controls">
+  <div className="kapil-cart-item-quantity">
+    <button
+      onClick={() => updateQuantity(item.cartItemId, item.localQuantity - 1)}
+      className={`kapil-cart-item-quantity-btn ${item.localQuantity === 1 ? 'delete-btn' : ''}`}
+      disabled={updatingItems.has(item.cartItemId)}
+      title={item.localQuantity === 1 ? 'Remove item' : 'Decrease quantity'}
+    >
+      {updatingItems.has(item.cartItemId) ? (
+        <div className="kapil-cart-mini-spinner"></div>
+      ) : item.localQuantity === 1 ? (
+        <Trash2 size={16} />
+      ) : (
+        <Minus size={16} />
+      )}
+    </button>
+    <span className="kapil-cart-item-quantity-value">
+      {updatingItems.has(item.cartItemId) ? (
+        <div className="kapil-cart-mini-spinner"></div>
+      ) : (
+        item.localQuantity
+      )}
+    </span>
+    <button
+      onClick={() => updateQuantity(item.cartItemId, item.localQuantity + 1)}
+      className="kapil-cart-item-quantity-btn"
+      disabled={updatingItems.has(item.cartItemId)}
+      title="Increase quantity"
+    >
+      <Plus size={16} />
+    </button>
+  </div>
+</div>
                       </div>
                     );
                   })}
@@ -676,7 +646,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
               <div className="kapil-cart-footer">
                 <div className="kapil-cart-summary">
                   <div className="kapil-cart-total">
-                    <span>Subtotal ({cartItemCount} items):</span>
+                    <span>Subtotal ({cartItemCount} Items, {cartItemCount1} Quantities)</span>
                     <span className="kapil-cart-total-amount">₹{totalPrice.toFixed(2)}</span>
                   </div>
                   {totalSavings > 0 && (
@@ -688,14 +658,47 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
                   )}
                 </div>
 
+                {/* Add More Items Button */}
+                <button
+                  onClick={handleAddMoreItems}
+                  className="kapil-cart-add-more"
+                >
+                  <Plus size={20} />
+                  Add More Items
+                </button>
+
                 <div className="kapil-cart-terms">
                   <input type="checkbox" id="terms-checkbox" checked={true} readOnly />
                   <label htmlFor="terms-checkbox">
-                    I accept the <a href="/shipping" target="_blank">terms and conditions</a>,{' '}
-                    <a href="/refund" target="_blank">return & refund policy</a>, and{' '}
-                    <a href="/privacy" target="_blank">privacy policy</a>
+                    I accept the{" "}
+                    <span
+                      onClick={() => setIsTermsOpen(true)}
+                      style={{ color: "#16a34a", cursor: "pointer" }}
+                    >
+                      terms and conditions
+                    </span>
+                    ,{" "}
+                    <span
+                      onClick={() => setIsRefundOpen(true)}
+                      style={{ color: "#16a34a", cursor: "pointer" }}
+                    >
+                      return & refund policy
+                    </span>
+                    , and{" "}
+                    <span
+                      onClick={() => setIsPrivacyOpen(true)}
+                      style={{ color: "#16a34a", cursor: "pointer" }}
+                    >
+                      privacy policy
+                    </span>.
                   </label>
+
+                  {/* Modals */}
+                  <TermsAndConditions isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+                  <PrivacyPolicy isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+                  <RefundPolicy isOpen={isRefundOpen} onClose={() => setIsRefundOpen(false)} />
                 </div>
+
 
                 <button
                   onClick={handleProceed}
@@ -703,6 +706,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
                   disabled={cartItemCount === 0}
                 >
                   Proceed to Address
+                  <ArrowRight size={18} />
                 </button>
               </div>
             )}
