@@ -128,7 +128,7 @@ const Wishlist = ({ wishlist, setWishlist }) => {
         <div className="no-products">
           <p>Your wishlist is empty.</p>
           <button
-            onClick={() => navigate('/products/all')}
+            onClick={() => navigate('/categories')}
             style={{
               marginTop: '1rem',
               padding: '0.5rem 1rem',
