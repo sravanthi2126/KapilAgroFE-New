@@ -70,6 +70,22 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     };
   }, [setIsLoginOpen, setCart]);
 
+  // Click outside to close mobile menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isMobileMenuOpen && 
+          !event.target.closest('.kapil-navbar-mobile-menu') && 
+          !event.target.closest('.kapil-navbar-mobile-toggle')) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isMobileMenuOpen]);
+
   const handleLogout = () => {
     dismissAllToasts();
     localStorage.removeItem('user');
@@ -94,6 +110,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
   };
 
   const toggleMobileMenu = () => {
+    console.log('Toggle mobile menu clicked, current state:', isMobileMenuOpen);
     setIsMobileMenuOpen(!isMobileMenuOpen);
     if (isMobileSearchOpen) {
       setIsMobileSearchOpen(false);
@@ -264,6 +281,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
             onClick={toggleMobileMenu}
             className="kapil-navbar-mobile-toggle"
             aria-label="Toggle mobile menu"
+            data-menu-open={isMobileMenuOpen}
           >
             {isMobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
@@ -277,7 +295,11 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
       )}
 
       {isMobileMenuOpen && (
-        <div className="kapil-navbar-mobile-menu" style={{ display: 'flex' }}>
+        <div 
+          className="kapil-navbar-mobile-menu show-mobile-menu" 
+          style={{ display: 'flex' }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="kapil-mobile-menu-content">
             <div className="kapil-mobile-nav-items">
               {['home', 'categories', 'about', 'contact', 'orders'].map((page) => (
