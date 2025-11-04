@@ -207,7 +207,7 @@ export const authAPI = {
   verifyLoginOTP: async (phoneNo, otp) => {
     const response = await apiClient.post('/user/login/otp/verify', { 
       phoneNo, 
-      otp: otp.toString() // Ensure OTP is string
+      otp: otp.toString()
     });
     return response.data;
   },
@@ -218,13 +218,13 @@ export const authAPI = {
     return response.data;
   },
 
-  // Registration OTP verification - FIXED THIS
+  // Registration OTP verification - FIXED ENDPOINT
   verifyRegisterOTP: async (phoneNo, otp) => {
     console.log('Sending verify OTP request:', { phoneNo, otp });
     
     const response = await apiClient.post('/user/register/otp/verify', { 
-      phoneNo: phoneNo.toString(), // Ensure phoneNo is string
-      otp: otp.toString() // Ensure OTP is string
+      phoneNo: phoneNo.toString(),
+      otp: otp.toString()
     });
     
     return response.data;
@@ -236,7 +236,6 @@ export const authAPI = {
     return response.data;
   }
 };
-
 
 // Generic HTTP methods
 export const get = async (url, config = {}) => {

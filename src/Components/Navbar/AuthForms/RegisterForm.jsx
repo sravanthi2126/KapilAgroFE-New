@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { User, Mail, Eye, EyeOff, Phone, Smartphone } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { User, Mail, Eye, EyeOff, Phone, Smartphone, Loader } from 'lucide-react';
+import { showSuccess, showError, showInfo } from '../../../utils/toastUtils';
 import { authAPI, scheduleTokenRefresh } from '../../../services/authService';
 
 const RegisterForm = ({ setIsOpen, setCurrentPage, setCart, switchToLogin }) => {
@@ -14,6 +14,8 @@ const RegisterForm = ({ setIsOpen, setCurrentPage, setCart, switchToLogin }) => 
     otp: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
+  const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
   const [errors, setErrors] = useState({});
   const [otpCooldown, setOtpCooldown] = useState(0);
 
@@ -86,11 +88,11 @@ const RegisterForm = ({ setIsOpen, setCurrentPage, setCart, switchToLogin }) => 
       scheduleTokenRefresh();
       window.dispatchEvent(new CustomEvent('userLoggedIn'));
       setCurrentPage('home');
-      toast.success('Account created successfully!');
+      showSuccess('Account created successfully!');
       setIsOpen(false);
     } catch (error) {
       console.error('Error handling auth success:', error);
-      toast.error('Registration successful but there was an issue loading your data. Please refresh the page.');
+      showError('Registration successful but there was an issue loading your data. Please refresh the page.');
     }
   };
 
@@ -146,7 +148,7 @@ const RegisterForm = ({ setIsOpen, setCurrentPage, setCart, switchToLogin }) => 
       return;
     }
 
-    setIsLoading(true);
+    setIsSendingOTP(true);
     try {
       const requestData = {
         name: formData.name,
@@ -161,101 +163,83 @@ const RegisterForm = ({ setIsOpen, setCurrentPage, setCart, switchToLogin }) => 
       console.log('OTP request successful:', result);
       
       setShowOTPField(true);
-      toast.info('OTP sent to your phone number');
+      showInfo('OTP sent to your phone number');
       setOtpCooldown(60);
       const cooldownTimer = setInterval(() => setOtpCooldown((prev) => prev - 1), 1000);
       setTimeout(() => clearInterval(cooldownTimer), 60000);
     } catch (error) {
       console.error('API error:', error);
       if (error.message?.includes('timeout')) {
-        toast.error('Request timed out. Please check your connection and try again.');
+        showError('Request timed out. Please check your connection and try again.');
       } else if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
+        showError(error.response.data.message);
       } else {
-        toast.error('Failed to send OTP. Please try again.');
+        showError('Failed to send OTP. Please try again.');
       }
     } finally {
-      setIsLoading(false);
+      setIsSendingOTP(false);
     }
   }, [formData, otpCooldown]);
 
-const handleRegisterSubmit = async (e) => {
-  e.preventDefault();
-  console.log('Form submitted, showOTPField:', showOTPField);
-  
-  // If OTP field is not shown, send OTP first
-  if (!showOTPField) {
-    console.log('Calling handleSendOTP');
-    await handleSendOTP();
-    return;
-  }
-
-  // If OTP field is shown, validate OTP and submit registration
-  console.log('Validating OTP field');
-  if (!validateOTPField()) {
-    console.log('OTP validation failed');
-    return;
-  }
-
-  console.log('All validations passed, calling verify API');
-  setIsLoading(true);
-  try {
-    const requestData = {
-      phoneNo: formatPhoneNumber(formData.phoneNo), 
-      otp: formData.otp
-    };
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    console.log('Verifying OTP');
     
-    console.log('Calling verifyRegisterOTP with:', requestData);
-    
-    const result = await authAPI.verifyRegisterOTP(requestData.phoneNo, requestData.otp);
-    console.log('Registration successful:', result);
-    
-    await handleAuthSuccess(result);
-  } catch (error) {
-    console.error('API error details:', error);
-    
-    // Handle specific backend errors
-    if (error.response?.data) {
-      const errorData = error.response.data;
-      console.log('Backend error response:', errorData);
-      
-      if (errorData.message) {
-        // Show the actual backend error message
-        toast.error(errorData.message);
-      } else if (errorData.includes('JSON parse error') || errorData.includes('Cannot deserialize')) {
-        toast.error('Invalid OTP format. Please try again.');
-      } else {
-        toast.error('Registration failed. Please try again.');
-      }
-    } else if (error.message?.includes('timeout')) {
-      toast.error('Request timed out. Please check your internet connection and try again.');
-    } else {
-      toast.error(error.message || 'Failed to create account. Please try again.');
+    if (!validateOTPField()) {
+      console.log('OTP validation failed');
+      return;
     }
-  } finally {
-    setIsLoading(false);
-  }
-};
 
-  const getSubmitButtonText = () => {
-    if (isLoading) return 'Processing...';
-    if (!showOTPField) return 'Send OTP';
-    return 'Create Account';
+    console.log('All validations passed, calling verify API');
+    setIsVerifyingOTP(true);
+    try {
+      const requestData = {
+        phoneNo: formatPhoneNumber(formData.phoneNo), 
+        otp: formData.otp
+      };
+      
+      console.log('Calling verifyRegisterOTP with:', requestData);
+      
+      const result = await authAPI.verifyRegisterOTP(requestData.phoneNo, requestData.otp);
+      console.log('Registration successful:', result);
+      
+      await handleAuthSuccess(result);
+    } catch (error) {
+      console.error('API error details:', error);
+      
+      // Handle specific backend errors
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        console.log('Backend error response:', errorData);
+        
+        if (errorData.message) {
+          showError(errorData.message);
+        } else if (errorData.includes('JSON parse error') || errorData.includes('Cannot deserialize')) {
+          showError('Invalid OTP format. Please try again.');
+        } else {
+          showError('Registration failed. Please try again.');
+        }
+      } else if (error.message?.includes('timeout')) {
+        showError('Request timed out. Please check your internet connection and try again.');
+      } else {
+        showError(error.message || 'Failed to create account. Please try again.');
+      }
+    } finally {
+      setIsVerifyingOTP(false);
+    }
   };
 
-  const isSubmitDisabled = () => {
-    if (isLoading) return true;
-    if (!showOTPField) {
-      // For Send OTP button, check if basic fields are filled
-      return !formData.name || !formData.email || !formData.password || !formData.phoneNo;
-    }
-    // For Create Account button, check if OTP is filled
-    return !formData.otp;
+  const isSendOTPDisabled = () => {
+    return isSendingOTP || !formData.name || !formData.email || !formData.password || !formData.phoneNo;
+  };
+
+  const isVerifyOTPDisabled = () => {
+    return isVerifyingOTP || !formData.otp || formData.otp.length !== 6;
   };
 
   return (
     <div className="lm-body">
-      <form onSubmit={handleRegisterSubmit} className="lm-form-container">
+      <form className="lm-form-container">
         <div className="lm-field-group">
           <label className="lm-field-label">
             <User size={16} />
@@ -267,7 +251,7 @@ const handleRegisterSubmit = async (e) => {
             onChange={(e) => handleInputChange('name', e.target.value)}
             className={`lm-input ${errors.name ? 'lm-input-error' : ''}`}
             placeholder="Enter your full name"
-            disabled={isLoading}
+            disabled={isSendingOTP || isVerifyingOTP || showOTPField}
           />
           {errors.name && <span className="lm-error-message">{errors.name}</span>}
         </div>
@@ -283,7 +267,7 @@ const handleRegisterSubmit = async (e) => {
             onChange={(e) => handleInputChange('email', e.target.value)}
             className={`lm-input ${errors.email ? 'lm-input-error' : ''}`}
             placeholder="Enter your email address (e.g., user@gmail.com)"
-            disabled={isLoading}
+            disabled={isSendingOTP || isVerifyingOTP || showOTPField}
           />
           {errors.email && <span className="lm-error-message">{errors.email}</span>}
         </div>
@@ -300,13 +284,13 @@ const handleRegisterSubmit = async (e) => {
               onChange={(e) => handleInputChange('password', e.target.value)}
               className={`lm-input lm-password-input ${errors.password ? 'lm-input-error' : ''}`}
               placeholder="Create a password (min 6 characters)"
-              disabled={isLoading}
+              disabled={isSendingOTP || isVerifyingOTP || showOTPField}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="lm-password-toggle"
-              disabled={isLoading}
+              disabled={isSendingOTP || isVerifyingOTP || showOTPField}
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
@@ -328,11 +312,30 @@ const handleRegisterSubmit = async (e) => {
               className={`lm-input lm-phone-input ${errors.phoneNo ? 'lm-input-error' : ''}`}
               placeholder="Enter 10-digit number"
               maxLength="10"
-              disabled={isLoading}
+              disabled={isSendingOTP || isVerifyingOTP || showOTPField}
             />
           </div>
           {errors.phoneNo && <span className="lm-error-message">{errors.phoneNo}</span>}
         </div>
+
+        {/* Send OTP Button - Only show when OTP field is not visible */}
+        {!showOTPField && (
+          <button
+            type="button"
+            onClick={handleSendOTP}
+            disabled={isSendOTPDisabled()}
+            className="lm-submit-btn"
+          >
+            {isSendingOTP ? (
+              <>
+                <Loader size={18} className="lm-spinner" />
+                Sending OTP...
+              </>
+            ) : (
+              'Send OTP'
+            )}
+          </button>
+        )}
 
         {showOTPField && (
           <div className="lm-field-group">
@@ -350,31 +353,40 @@ const handleRegisterSubmit = async (e) => {
               className={`lm-input lm-otp-input ${errors.otp ? 'lm-input-error' : ''}`}
               placeholder="000000"
               maxLength="6"
-              disabled={isLoading}
+              disabled={isVerifyingOTP}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
               <p className="lm-otp-hint">OTP sent to +91{formData.phoneNo}</p>
               <button
                 type="button"
                 onClick={handleSendOTP}
-                disabled={isLoading || otpCooldown > 0}
+                disabled={isSendingOTP || otpCooldown > 0}
                 className="lm-resend-btn"
               >
-                {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : 'Resend'}
+                {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : 'Resend OTP'}
               </button>
             </div>
             {errors.otp && <span className="lm-error-message">{errors.otp}</span>}
+            
+            {/* Verify OTP Button - Only show when OTP field is visible */}
+            <button
+              type="button"
+              onClick={handleVerifyOTP}
+              disabled={isVerifyOTPDisabled()}
+              className="lm-submit-btn"
+              style={{ marginTop: '16px' }}
+            >
+              {isVerifyingOTP ? (
+                <>
+                  <Loader size={18} className="lm-spinner" />
+                  Verifying OTP...
+                </>
+              ) : (
+                'Verify OTP & Create Account'
+              )}
+            </button>
           </div>
         )}
-
-        {/* Single Submit Button */}
-        <button
-          type="submit"
-          disabled={isSubmitDisabled()}
-          className="lm-submit-btn"
-        >
-          {getSubmitButtonText()}
-        </button>
 
         <div className="lm-switch-section">
           <p className="lm-switch-text">Already have an account?</p>
@@ -382,7 +394,7 @@ const handleRegisterSubmit = async (e) => {
             type="button"
             onClick={switchToLogin}
             className="lm-switch-btn"
-            disabled={isLoading}
+            disabled={isSendingOTP || isVerifyingOTP}
           >
             Back to Login
           </button>

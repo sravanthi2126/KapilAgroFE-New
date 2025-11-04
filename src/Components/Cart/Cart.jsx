@@ -6,7 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { apiClient, validateAndRefreshToken } from '../../services/authService';
 import './Cart.css';
 
-const Cart = ({ cart, setCart, setIsLoginOpen }) => {
+const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
   const navigate = useNavigate();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,16 +32,16 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
       const response = await apiClient.get('/user/cart/usercart');
       if (response.status === 200 && response.data.status === 'success') {
         const detailedCart = response.data.data.map((item) => {
-          const discountValue = item.price > item.afterDiscountPrice 
-            ? item.price - item.afterDiscountPrice 
+          const discountValue = item.price > item.afterDiscountPrice
+            ? item.price - item.afterDiscountPrice
             : 0;
           const isPercentageDiscount = discountValue > 0;
-          const discountPercentage = discountValue > 0 
-            ? ((discountValue / item.price) * 100).toFixed(0) 
+          const discountPercentage = discountValue > 0
+            ? ((discountValue / item.price) * 100).toFixed(0)
             : 0;
 
-          const isPlant = item.category.toLowerCase() === 'plants' || 
-                         item.productName.toLowerCase().includes('plant');
+          const isPlant = item.category.toLowerCase() === 'plants' ||
+            item.productName.toLowerCase().includes('plant');
           const unitMeasurement = item.unitMeasurement || (isPlant ? '1 Plant' : null);
           const plantAge = item.plantAge || (isPlant ? '1' : null);
 
@@ -145,16 +145,16 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
           prev.map((item) =>
             item.cartItemId === cartItemId
               ? {
-                  ...item,
-                  localQuantity: quantity,
-                  quantity: quantity,
-                  unit_measurement: item.category.toLowerCase() === 'plants' || 
-                                  item.product_name.toLowerCase().includes('plant')
-                    ? '1 Plant'
-                    : item.unitMeasurement
+                ...item,
+                localQuantity: quantity,
+                quantity: quantity,
+                unit_measurement: item.category.toLowerCase() === 'plants' ||
+                  item.product_name.toLowerCase().includes('plant')
+                  ? '1 Plant'
+                  : item.unitMeasurement
                     ? `${quantity} ${item.unitMeasurement.replace(/^\d+\s*/, '')}`
                     : null,
-                }
+              }
               : item
           )
         );
@@ -291,11 +291,11 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
           prev.map((item) =>
             item.cartItemId === cartItemId
               ? {
-                  ...item,
-                  plant_age: newPlantAge,
-                  price: newPrice,
-                  after_discount_price: afterDiscountPrice,
-                }
+                ...item,
+                plant_age: newPlantAge,
+                price: newPrice,
+                after_discount_price: afterDiscountPrice,
+              }
               : item
           )
         );
@@ -371,11 +371,11 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
           prev.map((item) =>
             item.cartItemId === cartItemId
               ? {
-                  ...item,
-                  unit_measurement: newSize,
-                  price: newPrice,
-                  after_discount_price: afterDiscountPrice,
-                }
+                ...item,
+                unit_measurement: newSize,
+                price: newPrice,
+                after_discount_price: afterDiscountPrice,
+              }
               : item
           )
         );
@@ -420,8 +420,10 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
       return;
     }
     setIsCartOpen(false);
+    if (setIsMobileMenuOpen) setIsMobileMenuOpen(false); // <- close mobile menu if open
     navigate('/address', { state: { cartItems: cart } });
   };
+
 
   const cartItemCount = cart.length;
   const totalPrice = cart.reduce(
@@ -438,8 +440,10 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
   return (
     <div className="kapil-cart-container">
       <button
-        onClick={() => setIsCartOpen(true)}
-        className="kapil-cart-icon"
+        onClick={() => {
+          if (setIsMobileMenuOpen) setIsMobileMenuOpen(false);
+          setIsCartOpen(true);
+        }} className="kapil-cart-icon"
         title="View Cart"
       >
         <ShoppingCart size={24} />
@@ -486,27 +490,27 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
                   <Package size={80} className="kapil-cart-empty-icon" />
                   <h4>Your cart is empty</h4>
                   <p>Add some delicious products to get started!</p>
-                <button
-  onClick={() => {
-    setIsCartOpen(false);
-    const currentPath = window.location.pathname;
-    
-    if (currentPath.startsWith('/products')) {
-      // If user is on product detail page, go back to categories
-      navigate('/categories');
-    } else if (currentPath === '/') {
-      // If user is on home page, scroll to categories section
-      navigate('/categories');
-    } else {
-      // If already on categories, just close cart
-      // Optional: scroll to top of categories
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }}
-  className="kapil-cart-continue"
->
-  Continue Shopping
-</button>
+                  <button
+                    onClick={() => {
+                      setIsCartOpen(false);
+                      const currentPath = window.location.pathname;
+
+                      if (currentPath.startsWith('/products')) {
+                        // If user is on product detail page, go back to categories
+                        navigate('/categories');
+                      } else if (currentPath === '/') {
+                        // If user is on home page, scroll to categories section
+                        navigate('/categories');
+                      } else {
+                        // If already on categories, just close cart
+                        // Optional: scroll to top of categories
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                    }}
+                    className="kapil-cart-continue"
+                  >
+                    Continue Shopping
+                  </button>
                 </div>
               ) : (
                 <div className="kapil-cart-items">
@@ -591,24 +595,24 @@ const Cart = ({ cart, setCart, setIsLoginOpen }) => {
 
                             {(item.category.toLowerCase() === 'plants' ||
                               item.product_name.toLowerCase().includes('plant')) && (
-                              <div className="kapil-cart-item-age">
-                                <label htmlFor={`plantAge-${item.cartItemId}`} className="kapil-cart-item-age-label">
-                                  Plant Age:
-                                </label>
-                                <select
-                                  id={`plantAge-${item.cartItemId}`}
-                                  className="kapil-cart-item-age-select"
-                                  value={item.plant_age || '1'}
-                                  onChange={(e) =>
-                                    updatePlantAge(item.cartItemId, item.productId, e.target.value)
-                                  }
-                                  disabled={updatingItems.has(item.cartItemId)}
-                                >
-                                  <option value="1">1 Year</option>
-                                  
-                                </select>
-                              </div>
-                            )}
+                                <div className="kapil-cart-item-age">
+                                  <label htmlFor={`plantAge-${item.cartItemId}`} className="kapil-cart-item-age-label">
+                                    Plant Age:
+                                  </label>
+                                  <select
+                                    id={`plantAge-${item.cartItemId}`}
+                                    className="kapil-cart-item-age-select"
+                                    value={item.plant_age || '1'}
+                                    onChange={(e) =>
+                                      updatePlantAge(item.cartItemId, item.productId, e.target.value)
+                                    }
+                                    disabled={updatingItems.has(item.cartItemId)}
+                                  >
+                                    <option value="1">1 Year</option>
+
+                                  </select>
+                                </div>
+                              )}
 
                             <div className="kapil-cart-item-total">
                               Total: <span className="kapil-cart-item-total-amount">₹{itemTotal.toFixed(2)}</span>
