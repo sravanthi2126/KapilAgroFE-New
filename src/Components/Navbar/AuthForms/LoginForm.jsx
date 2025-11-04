@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Mail, Smartphone, Eye, EyeOff } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { Mail, Smartphone, Eye, EyeOff, Loader } from 'lucide-react';
+import { showSuccess, showError, showInfo } from '../../../utils/toastUtils';
 import { authAPI, scheduleTokenRefresh } from '../../../services/authService';
 
 const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => {
@@ -14,6 +14,7 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
     otp: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
   const [errors, setErrors] = useState({});
   const [otpCooldown, setOtpCooldown] = useState(0);
 
@@ -85,11 +86,11 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
       scheduleTokenRefresh();
       window.dispatchEvent(new CustomEvent('userLoggedIn'));
       setCurrentPage('home');
-      toast.success('Logged in successfully');
+      showSuccess('Logged in successfully');
       setIsOpen(false);
     } catch (error) {
       console.error('Error handling auth success:', error);
-      toast.error('Login successful but there was an issue loading your data. Please refresh the page.');
+      showError('Login successful but there was an issue loading your data. Please refresh the page.');
     }
   };
 
@@ -129,26 +130,26 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
   const handleSendOTP = useCallback(async () => {
     if (!validateForm() || otpCooldown > 0) return;
 
-    setIsLoading(true);
+    setIsSendingOTP(true);
     try {
       await authAPI.requestLoginOTP(formatPhoneNumber(formData.phoneNo));
       setShowOTPField(true);
-      toast.info('OTP sent to your phone number');
+      showInfo('OTP sent to your phone number');
       setOtpCooldown(60);
       const cooldownTimer = setInterval(() => setOtpCooldown((prev) => prev - 1), 1000);
       setTimeout(() => clearInterval(cooldownTimer), 60000);
     } catch (error) {
       console.error('API error:', error);
       if (error.response?.status === 404) {
-        toast.error('Phone number not registered. Please sign up first.');
+        showError('Phone number not registered. Please sign up first.');
         switchToRegister();
       } else if (error.message?.includes('timeout')) {
-        toast.error('Request timed out. Please check your connection and try again.');
+        showError('Request timed out. Please check your connection and try again.');
       } else {
-        toast.error('Failed to send OTP. Please try again.');
+        showError('Failed to send OTP. Please try again.');
       }
     } finally {
-      setIsLoading(false);
+      setIsSendingOTP(false);
     }
   }, [formData, otpCooldown, validateForm]);
 
@@ -163,8 +164,6 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
       if (loginMethod === 'email') {
         result = await authAPI.loginWithEmail(formData.email, formData.password);
         await handleAuthSuccess(result);
-      } else if (loginMethod === 'phone' && !showOTPField) {
-        await handleSendOTP();
       } else if (loginMethod === 'phone' && showOTPField) {
         result = await authAPI.verifyLoginOTP(formatPhoneNumber(formData.phoneNo), formData.otp);
         await handleAuthSuccess(result);
@@ -172,12 +171,12 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
     } catch (error) {
       console.error('API error:', error);
       if (error.response?.status === 404) {
-        toast.error(`${loginMethod === 'email' ? 'Email' : 'Phone number'} not registered. Please sign up first.`);
+        showError(`${loginMethod === 'email' ? 'Email' : 'Phone number'} not registered. Please sign up first.`);
         switchToRegister();
       } else if (error.message?.includes('timeout')) {
-        toast.error('Request timed out. Please check your internet connection and try again.');
+        showError('Request timed out. Please check your internet connection and try again.');
       } else {
-        toast.error(error.message || 'Failed to process request. Please try again.');
+        showError(error.message || 'Failed to process request. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -191,6 +190,19 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
     setErrors({});
   };
 
+  const isSendOTPDisabled = () => {
+    return isSendingOTP || !formData.phoneNo || !validatePhone(formData.phoneNo) || otpCooldown > 0;
+  };
+
+  const isLoginDisabled = () => {
+    if (isLoading) return true;
+    if (loginMethod === 'email') {
+      return !formData.email || !formData.password;
+    } else {
+      return !formData.phoneNo || !showOTPField || !formData.otp;
+    }
+  };
+
   return (
     <div className="lm-body">
       <div className="lm-method-toggle">
@@ -198,7 +210,7 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
           type="button"
           className={`lm-method-btn ${loginMethod === 'email' ? 'lm-method-btn-active' : ''}`}
           onClick={() => handleMethodSwitch('email')}
-          disabled={isLoading}
+          disabled={isLoading || isSendingOTP}
         >
           <Mail size={16} />
           Email
@@ -207,7 +219,7 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
           type="button"
           className={`lm-method-btn ${loginMethod === 'phone' ? 'lm-method-btn-active' : ''}`}
           onClick={() => handleMethodSwitch('phone')}
-          disabled={isLoading}
+          disabled={isLoading || isSendingOTP}
         >
           <Smartphone size={16} />
           Phone
@@ -277,7 +289,7 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
                   className={`lm-input lm-phone-input ${errors.phoneNo ? 'lm-input-error' : ''}`}
                   placeholder="Enter 10-digit number"
                   maxLength="10"
-                  disabled={isLoading}
+                  disabled={isLoading || isSendingOTP || showOTPField}
                 />
               </div>
               {errors.phoneNo && <span className="lm-error-message">{errors.phoneNo}</span>}
@@ -287,10 +299,19 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
               <button
                 type="button"
                 onClick={handleSendOTP}
-                disabled={isLoading || !formData.phoneNo || !validatePhone(formData.phoneNo) || otpCooldown > 0}
+                disabled={isSendOTPDisabled()}
                 className="lm-otp-btn"
               >
-                {isLoading ? 'Sending...' : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : 'Send OTP'}
+                {isSendingOTP ? (
+                  <>
+                    <Loader size={18} className="lm-spinner" />
+                    Sending OTP...
+                  </>
+                ) : otpCooldown > 0 ? (
+                  `Resend in ${otpCooldown}s`
+                ) : (
+                  'Send OTP'
+                )}
               </button>
             )}
 
@@ -317,10 +338,10 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
                   <button
                     type="button"
                     onClick={handleSendOTP}
-                    disabled={isLoading || otpCooldown > 0}
+                    disabled={isSendingOTP || otpCooldown > 0}
                     className="lm-resend-btn"
                   >
-                    {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : 'Resend'}
+                    {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : 'Resend OTP'}
                   </button>
                 </div>
                 {errors.otp && <span className="lm-error-message">{errors.otp}</span>}
@@ -331,10 +352,17 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoginDisabled()}
           className="lm-submit-btn"
         >
-          {isLoading ? 'Processing...' : 'Sign In'}
+          {isLoading ? (
+            <>
+              <Loader size={18} className="lm-spinner" />
+              Signing In...
+            </>
+          ) : (
+            'Sign In'
+          )}
         </button>
 
         <div className="lm-switch-section">
@@ -343,7 +371,7 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
             type="button"
             onClick={switchToRegister}
             className="lm-switch-btn"
-            disabled={isLoading}
+            disabled={isLoading || isSendingOTP}
           >
             Create Account
           </button>

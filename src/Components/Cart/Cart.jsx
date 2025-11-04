@@ -6,7 +6,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { apiClient, validateAndRefreshToken } from '../../services/authService';
 import './Cart.css';
 
-const Cart = ({ cart, setCart, setIsLoginOpen, }) => {
+const Cart = ({ cart, setCart, setIsLoginOpen, setIsMobileMenuOpen }) => {
+
   const navigate = useNavigate();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,16 +33,16 @@ const Cart = ({ cart, setCart, setIsLoginOpen, }) => {
       const response = await apiClient.get('/user/cart/usercart');
       if (response.status === 200 && response.data.status === 'success') {
         const detailedCart = response.data.data.map((item) => {
-          const discountValue = item.price > item.afterDiscountPrice 
-            ? item.price - item.afterDiscountPrice 
+          const discountValue = item.price > item.afterDiscountPrice
+            ? item.price - item.afterDiscountPrice
             : 0;
           const isPercentageDiscount = discountValue > 0;
-          const discountPercentage = discountValue > 0 
-            ? ((discountValue / item.price) * 100).toFixed(0) 
+          const discountPercentage = discountValue > 0
+            ? ((discountValue / item.price) * 100).toFixed(0)
             : 0;
 
-          const isPlant = item.category.toLowerCase() === 'plants' || 
-                         item.productName.toLowerCase().includes('plant');
+          const isPlant = item.category.toLowerCase() === 'plants' ||
+            item.productName.toLowerCase().includes('plant');
           const unitMeasurement = item.unitMeasurement || (isPlant ? '1 Plant' : null);
           const plantAge = item.plantAge || (isPlant ? '1' : null);
 
@@ -271,11 +272,11 @@ const Cart = ({ cart, setCart, setIsLoginOpen, }) => {
           prev.map((item) =>
             item.cartItemId === cartItemId
               ? {
-                  ...item,
-                  plant_age: newPlantAge,
-                  price: newPrice,
-                  after_discount_price: afterDiscountPrice,
-                }
+                ...item,
+                plant_age: newPlantAge,
+                price: newPrice,
+                after_discount_price: afterDiscountPrice,
+              }
               : item
           )
         );
@@ -351,11 +352,11 @@ const Cart = ({ cart, setCart, setIsLoginOpen, }) => {
           prev.map((item) =>
             item.cartItemId === cartItemId
               ? {
-                  ...item,
-                  unit_measurement: newSize,
-                  price: newPrice,
-                  after_discount_price: afterDiscountPrice,
-                }
+                ...item,
+                unit_measurement: newSize,
+                price: newPrice,
+                after_discount_price: afterDiscountPrice,
+              }
               : item
           )
         );
@@ -405,6 +406,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, }) => {
       return;
     }
     setIsCartOpen(false);
+    if (setIsMobileMenuOpen) setIsMobileMenuOpen(false); // <- close mobile menu if open
     navigate('/address', { state: { cartItems: cart } });
   };
 
@@ -424,8 +426,10 @@ const Cart = ({ cart, setCart, setIsLoginOpen, }) => {
   return (
     <div className="kapil-cart-container">
       <button
-        onClick={() => setIsCartOpen(true)}
-        className="kapil-cart-icon"
+        onClick={() => {
+          if (setIsMobileMenuOpen) setIsMobileMenuOpen(false);
+          setIsCartOpen(true);
+        }} className="kapil-cart-icon"
         title="View Cart"
       >
         <ShoppingCart size={24} />

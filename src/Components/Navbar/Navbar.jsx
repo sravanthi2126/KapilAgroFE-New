@@ -10,7 +10,7 @@ import kapilAgroLogo from '../Assets/kapil agro logo.png';
 import kapilGroupLogo from '../Assets/kapil group.png';
 
 const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set(), isLoginOpen, setIsLoginOpen }) => {
-  console.log('Navbar rendering, isLoginOpen:', isLoginOpen); // Debug state
+  console.log('Navbar rendering, isLoginOpen:', isLoginOpen);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -44,16 +44,16 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
 
     const handleLoginEvent = () => {
       loadUser();
-      setIsLoginOpen(false); // Sync modal state on login
+      setIsLoginOpen(false);
       console.log('userLoggedIn event, setting isLoginOpen to false');
     };
 
     const handleLogoutEvent = () => {
-      setIsLoginOpen(true); // Open modal on logout
+      setIsLoginOpen(true);
       setUser(null);
       setCart([]);
       setIsMobileMenuOpen(false);
-      showSuccess('Session expired. Please log in again.');
+      // Toast removed from here to prevent duplicates
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -68,7 +68,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
       window.removeEventListener('userLoggedOut', handleLogoutEvent);
       clearInterval(intervalId);
     };
-  }, [setIsLoginOpen]);
+  }, [setIsLoginOpen, setCart]);
 
   const handleLogout = () => {
     dismissAllToasts();
@@ -220,7 +220,12 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
             <SearchIcon size={20} className="kapil-mobile-search-icon" />
           </button>
 
-          <Cart cart={cart} setCart={setCart} setIsLoginOpen={setIsLoginOpen} />
+          <Cart
+            cart={cart}
+            setCart={setCart}
+            setIsLoginOpen={setIsLoginOpen}
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+          />
 
           <button
             onClick={handleWishlistClick}
@@ -329,7 +334,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
       )}
 
       <LoginModal
-        key={isLoginOpen ? 'open' : 'closed'} // Force re-mount on state change
         isOpen={isLoginOpen}
         setIsOpen={setIsLoginOpen}
         setCurrentPage={setCurrentPage}

@@ -20,7 +20,7 @@ import RefundPolicy from './Components/QuickLinks/RefundPolicy';
 import Address from './Components/Address/Address';
 import Payment from './Components/Payment/Payment';
 import OrderConfirmation from './Components/OrderConfirmation/OrderConfirmation';
-import Orders from './Components/Orders/Orders'; // Import the Orders component
+import Orders from './Components/Orders/Orders';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
@@ -66,7 +66,7 @@ function ScrollToSection({ setCurrentPage }) {
     } else if (pathname === '/order-confirmation') {
       setCurrentPage('order-confirmation');
     } else if (pathname === '/orders') {
-      setCurrentPage('orders'); // Set currentPage to 'orders' for the Orders page
+      setCurrentPage('orders');
     }
 
     const timer = setTimeout(() => {
@@ -93,7 +93,7 @@ function App() {
   useEffect(() => {
     const initializeAuth = async () => {
       const isValid = await validateAndRefreshToken();
-      console.log('Token validation result:', isValid); // Debug token validation
+      console.log('Token validation result:', isValid);
       if (isValid) {
         const userId = localStorage.getItem('userId');
         if (userId) {
@@ -186,7 +186,7 @@ function App() {
                   isLoginOpen={isLoginOpen}
                   setIsLoginOpen={setIsLoginOpen}
                 />
-      <HeroSection setCurrentPage={setCurrentPage} /> {/* Add this prop */}
+                <HeroSection setCurrentPage={setCurrentPage} />
                 <FreshLanding />
                 <Categories
                   setCurrentPage={setCurrentPage}
