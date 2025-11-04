@@ -573,23 +573,23 @@ const handleProceed = async () => {
 
                             {(item.category.toLowerCase() === 'plants' ||
                               item.product_name.toLowerCase().includes('plant')) && (
-                                <div className="kapil-cart-item-age">
-                                  <label htmlFor={`plantAge-${item.cartItemId}`} className="kapil-cart-item-age-label">
-                                    Plant Age:
-                                  </label>
-                                  <select
-                                    id={`plantAge-${item.cartItemId}`}
-                                    className="kapil-cart-item-age-select"
-                                    value={item.plant_age || '1'}
-                                    onChange={(e) =>
-                                      updatePlantAge(item.cartItemId, item.productId, e.target.value)
-                                    }
-                                    disabled={updatingItems.has(item.cartItemId)}
-                                  >
-                                    <option value="1">1 Year</option>
-                                  </select>
-                                </div>
-                              )}
+                              <div className="kapil-cart-item-age">
+                                <label htmlFor={`plantAge-${item.cartItemId}`} className="kapil-cart-item-age-label">
+                                  Plant Age:
+                                </label>
+                                <select
+                                  id={`plantAge-${item.cartItemId}`}
+                                  className="kapil-cart-item-age-select"
+                                  value={item.plant_age || '1'}
+                                  onChange={(e) =>
+                                    updatePlantAge(item.cartItemId, item.productId, e.target.value)
+                                  }
+                                  disabled={updatingItems.has(item.cartItemId)}
+                                >
+                                  <option value="1">1 Year</option>
+                                </select>
+                              </div>
+                            )}
 
                             <div className="kapil-cart-item-total">
                               Total: <span className="kapil-cart-item-total-amount">₹{itemTotal.toFixed(2)}</span>
