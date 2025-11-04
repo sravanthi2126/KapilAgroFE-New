@@ -410,7 +410,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
     }
   };
 
-  const getDiscountPercentage = (originalPrice, discountedPrice) => {
+ const getDiscountPercentage = (originalPrice, discountedPrice) => {
     if (!originalPrice || originalPrice <= 0) return 0;
     return Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
   };
@@ -441,7 +441,6 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         </button>
         <h1>Payment</h1>
         
-        {/* Add More Items Button in Header */}
         <button 
           onClick={handleAddMoreItems}
           className="add-more-items-button"
@@ -459,101 +458,134 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
               <Package size={20} />
               <h2>Order Summary ({cartItems.length} items)</h2>
               
-              {/* Add More Items Button in Card Header */}
-              <button 
+              {/* <button 
                 onClick={handleAddMoreItems}
                 className="add-more-items-small"
               >
                 <ShoppingCart size={16} />
                 Add Items
-              </button>
+              </button> */}
             </div>
 
-            <div className="order-items-list">
-              {cartItems.map((item) => {
-                const originalPrice = parseFloat(item.price || 0);
-                const discountedPrice = parseFloat(item.after_discount_price || item.price || 0);
-                const quantity = parseInt(item.localQuantity || 0);
-                const hasDiscount = originalPrice > discountedPrice;
-                const discountPercentage = hasDiscount ? getDiscountPercentage(originalPrice, discountedPrice) : 0;
-                const originalTotal = originalPrice * quantity;
-                const finalTotal = discountedPrice * quantity;
-                const unit = item.unit || '';
+          <div className="payment-cart-items-container">
+  <div className="payment-cart-items-scroll">
+    {cartItems.map((item) => {
+      const originalPrice = parseFloat(item.price || 0);
+      const discountedPrice = parseFloat(item.after_discount_price || item.price || 0);
+      const quantity = parseInt(item.localQuantity || 0);
+      const hasDiscount = originalPrice > discountedPrice;
+      const discountPercentage = hasDiscount ? getDiscountPercentage(originalPrice, discountedPrice) : 0;
+      const originalTotal = originalPrice * quantity;
+      const finalTotal = discountedPrice * quantity;
+      const itemSavings = originalTotal - finalTotal;
 
-                return (
-                  <div key={item.cartItemId} className="order-item">
-                    <div className="item-image-container">
-                      <img
-                        src={item.image_url || '/images/placeholder.jpg'}
-                        alt={item.product_name}
-                        className="item-image"
-                        onError={(e) => (e.target.src = '/images/placeholder.jpg')}
-                      />
-                    </div>
-                    <div className="item-details">
-                      <h3 className="item-name">{item.product_name}</h3>
-                      <div className="item-meta">
-                        <span className="item-quantity">Qty: {quantity}</span>
-                        {unit && <span className="item-unit">Unit: {unit}</span>}
-                      </div>
-                      <div className="item-pricing">
-                        {hasDiscount && (
-                          <>
-                            <span className="original-price">₹{originalPrice.toFixed(2)}</span>
-                            <span className="discount-badge">{discountPercentage}% OFF</span>
-                          </>
-                        )}
-                        <span className="current-price">₹{discountedPrice.toFixed(2)}</span>
-                      </div>
-                    </div>
-                    <div className="item-total">
-                      {hasDiscount ? (
-                        <div className="total-breakdown">
-                          <span className="original-total">₹{originalTotal.toFixed(2)}</span>
-                          <span className="final-total">₹{finalTotal.toFixed(2)}</span>
-                        </div>
-                      ) : (
-                        <span className="final-total">₹{finalTotal.toFixed(2)}</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+      return (
+        <div key={item.cartItemId} className="payment-cart-item">
+          <div className="payment-cart-item-image-container">
+            <img
+              src={item.image_url || '/images/placeholder.jpg'}
+              alt={item.product_name}
+              className="payment-cart-item-image"
+              onError={(e) => (e.target.src = '/images/placeholder.jpg')}
+            />
+          </div>
+
+          <div className="payment-cart-item-details">
+            <h4 className="payment-cart-item-name" title={item.product_name}>
+              {item.product_name}
+            </h4>
+
+            <div className="payment-cart-item-info">
+              {item.unit_measurement && (
+                <div className="payment-cart-item-measurement">
+                  Size: {item.unit_measurement}
+                </div>
+              )}
+
+              {(item.category?.toLowerCase() === 'plants' || item.product_name?.toLowerCase().includes('plant')) && item.plant_age && (
+                <div className="payment-cart-item-age">
+                  Plant Age: {item.plant_age} Year{item.plant_age !== '1' ? 's' : ''}
+                </div>
+              )}
+
+              <div className="payment-cart-item-quantity-display">
+                Per Each Item: 
+              </div>
+
+              <div className="payment-cart-item-price">
+                {hasDiscount ? (
+                  <>
+                    <span className="payment-cart-discount-price">
+                      ₹{discountedPrice.toFixed(2)}
+                    </span>
+                    <span className="payment-cart-original-price">
+                      ₹{originalPrice.toFixed(2)}
+                    </span>
+                    <span className="payment-cart-discount-badge">
+                      {discountPercentage}% OFF
+                    </span>
+                  </>
+                ) : (
+                  <span className="payment-cart-no-discount-price">
+                    ₹{originalPrice.toFixed(2)}
+                  </span>
+                )}
+              </div>
+
+              <div className="payment-cart-item-total">
+                Total: <span className="payment-cart-item-total-amount">₹{finalTotal.toFixed(2)}</span>
+                {itemSavings > 0 && (
+                  <span className="payment-cart-item-savings">
+                    (Save ₹{itemSavings.toFixed(2)})
+                  </span>
+                )}
+              </div>
             </div>
+          </div>
 
-            {/* Add More Items Button at Bottom */}
+          <div className="payment-cart-item-controls">
+            <div className="payment-cart-item-quantity-display-only">
+              <span className="payment-quantity-label">Quantity:</span>
+              <span className="payment-quantity-value">{quantity}</span>
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</div>
             <div className="add-more-items-section">
               <button 
                 onClick={handleAddMoreItems}
                 className="add-more-items-bottom"
               >
-                <Plus size={20} />
+                <ShoppingCart size={20} />
                 Add More Items to Cart
               </button>
             </div>
 
-            <div className="price-breakdown">
-              <div className="price-row">
+            <div className="payment-price-breakdown">
+              <div className="payment-price-row">
                 <span>Original Amount</span>
                 <span>₹{parseFloat(currentOrderDetails.originalAmount || 0).toFixed(2)}</span>
               </div>
               {parseFloat(currentOrderDetails.productDiscountAmount || 0) > 0 && (
-                <div className="price-row discount">
+                <div className="payment-price-row discount">
                   <span>Product Discount</span>
                   <span>-₹{parseFloat(currentOrderDetails.productDiscountAmount || 0).toFixed(2)}</span>
                 </div>
               )}
-              <div className="price-row">
+              <div className="payment-price-row">
                 <span>Subtotal</span>
                 <span>₹{parseFloat(currentOrderDetails.subtotalAmount || 0).toFixed(2)}</span>
               </div>
               {parseFloat(currentOrderDetails.orderDiscountAmount || 0) > 0 && (
-                <div className="price-row discount">
+                <div className="payment-price-row discount">
                   <span>Order Discount</span>
                   <span>-₹{parseFloat(currentOrderDetails.orderDiscountAmount || 0).toFixed(2)}</span>
                 </div>
               )}
-              <div className="price-row">
+              <div className="payment-price-row">
                 <span>Shipping Charges</span>
                 <span>
                   {fetchingShipping
@@ -567,12 +599,12 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 </span>
               </div>
               {parseFloat(currentOrderDetails.totalTaxAmount || 0) > 0 && (
-                <div className="price-row">
+                <div className="payment-price-row">
                   <span>Taxes & Fees</span>
                   <span>₹{parseFloat(currentOrderDetails.totalTaxAmount || 0).toFixed(2)}</span>
                 </div>
               )}
-              <div className="price-row total">
+              <div className="payment-price-row total">
                 <span>Total Amount</span>
                 <span>₹{parseFloat(currentOrderDetails.totalAmount || 0).toFixed(2)}</span>
               </div>
@@ -581,85 +613,87 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         </div>
 
         {/* Right Column - Address & Payment Method */}
-        <div className="payment-right">
-          <div className="address-card">
-            <div className="card-header">
-              <MapPin size={20} />
-              <h2>Shipping Address</h2>
-            </div>
-            <div className="address-display">
-              <div className="address-name">
-                {shippingAddress.firstName} {shippingAddress.lastName}
-              </div>
-              <div className="address-details">
-                <p>{shippingAddress.addressLine1}</p>
-                {shippingAddress.addressLine2 && <p>{shippingAddress.addressLine2}</p>}
-                <p>{shippingAddress.city}, {shippingAddress.state}</p>
-                <p>Pincode: {shippingAddress.pincode}</p>
-                <p className="address-phone">Phone: {shippingAddress.phone}</p>
-              </div>
-            </div>
+        {/* Right Column - Address & Payment Method */}
+<div className="payment-right">
+  <div className="address-card">
+    <div className="card-header">
+      <MapPin size={20} />
+      <h2>Shipping Address</h2>
+    </div>
+    <div className="address-display">
+      <div className="address-name">
+        {shippingAddress.firstName} {shippingAddress.lastName}
+      </div>
+      <div className="address-details">
+        <p>{shippingAddress.addressLine1}</p>
+        {shippingAddress.addressLine2 && <p>{shippingAddress.addressLine2}</p>}
+        <p>{shippingAddress.city}, {shippingAddress.state}</p>
+        <p>Pincode: {shippingAddress.pincode}</p>
+        <p className="address-phone">Phone: {shippingAddress.phone}</p>
+      </div>
+    </div>
+  </div>
+
+  <div className="payment-method-card">
+    <div className="card-header">
+      <CreditCard size={20} />
+      <h2>Payment Method</h2>
+    </div>
+    <div className="payment-options">
+      {/* Single Online Payment Option */}
+      <label className={`payment-option ${paymentMethod === 'razorpay' ? 'selected enabled' : 'enabled'}`}>
+        <input
+          type="radio"
+          name="paymentMethod"
+          value="razorpay"
+          checked={paymentMethod === 'razorpay'}
+          onChange={(e) => {
+            setPaymentMethod(e.target.value);
+            setPaymentSelected(true);
+          }}
+        />
+        <div className="payment-option-content">
+          <div className="payment-icon">
+            <FaCreditCard size={24} />
           </div>
-
-          <div className="payment-method-card">
-            <div className="card-header">
-              <CreditCard size={20} />
-              <h2>Payment Method</h2>
-            </div>
-            <div className="payment-options">
-              <label className={`payment-option ${paymentMethod === 'razorpay' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="razorpay"
-                  checked={paymentMethod === 'razorpay'}
-                  onChange={(e) => {
-                    setPaymentMethod(e.target.value);
-                    setPaymentSelected(true);
-                  }}
-                />
-                <div className="payment-option-content">
-                  <div className="payment-icon">
-                    <FaCreditCard size={24} />
-                  </div>
-                  <div className="payment-info">
-                    <span className="payment-title">Online Payment</span>
-                    <span className="payment-desc">UPI, Cards, NetBanking, Wallets</span>
-                  </div>
-                  <div className="payment-check">
-                    <CheckCircle size={20} />
-                  </div>
-                </div>
-              </label>
-            </div>
-
-            {error && <div className="payment-error">{error}</div>}
-
-            <button
-              onClick={handlePlaceOrder}
-              className="place-order-button"
-              disabled={loading || cartItems.length === 0 || fetchingShipping || !paymentSelected}
-            >
-              {loading ? (
-                <div className="payment-spinner"></div>
-              ) : !paymentSelected ? (
-                "Select Payment Method"
-              ) : (
-                <>
-                  <IndianRupee size={20} />
-                  Place Order - ₹{parseFloat(currentOrderDetails.totalAmount || 0).toFixed(2)}
-                </>
-              )}
-            </button>
-
-            <div className="security-notice">
-              <div className="security-icon">
-                <FaLock size={16} />
-              </div>
-              <p>Your payment information is secure and encrypted</p>
-            </div>
+          <div className="payment-info">
+            <span className="payment-title">Online Payment</span>
+            <span className="payment-desc">UPI, Cards, NetBanking, Wallets</span>
+          </div>
+          <div className="payment-check">
+            <CheckCircle size={20} />
           </div>
         </div>
+      </label>
+    </div>
+
+    {error && <div className="payment-error">{error}</div>}
+
+    <button
+      onClick={handlePlaceOrder}
+      className="place-order-button"
+      disabled={loading || cartItems.length === 0 || fetchingShipping || !paymentSelected}
+    >
+      {loading ? (
+        <div className="payment-spinner"></div>
+      ) : !paymentSelected ? (
+        "Select Payment Method"
+      ) : (
+        <>
+          <IndianRupee size={20} />
+          Place Order - ₹{parseFloat(currentOrderDetails.totalAmount || 0).toFixed(2)}
+        </>
+      )}
+    </button>
+
+    <div className="security-notice">
+      <div className="security-icon">
+        <FaLock size={16} />
+      </div>
+      <p>Your payment information is secure and encrypted</p>
+    </div>
+  </div>
+</div>
       </div>
     </div>
   );

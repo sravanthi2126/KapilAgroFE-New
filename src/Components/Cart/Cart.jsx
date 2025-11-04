@@ -6,7 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { apiClient, validateAndRefreshToken } from '../../services/authService';
 import './Cart.css';
 
-const Cart = ({ cart, setCart, setIsLoginOpen, isDisabled = false }) => {
+const Cart = ({ cart, setCart, setIsLoginOpen, }) => {
   const navigate = useNavigate();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -408,7 +408,8 @@ const Cart = ({ cart, setCart, setIsLoginOpen, isDisabled = false }) => {
     navigate('/address', { state: { cartItems: cart } });
   };
 
-  const cartItemCount = cart.reduce((total, item) => total + (item.localQuantity || 0), 0);
+  const cartItemCount1 = cart.reduce((total, item) => total + (item.localQuantity || 0), 0);
+  const cartItemCount = cart.length;
   const totalPrice = cart.reduce(
     (sum, item) => sum + (item.after_discount_price || item.price || 0) * (item.localQuantity || 0),
     0
@@ -638,7 +639,7 @@ const Cart = ({ cart, setCart, setIsLoginOpen, isDisabled = false }) => {
               <div className="kapil-cart-footer">
                 <div className="kapil-cart-summary">
                   <div className="kapil-cart-total">
-                    <span>Subtotal ({cartItemCount} items):</span>
+                    <span>Subtotal ({cartItemCount} Items, {cartItemCount1} Quantities)</span>
                     <span className="kapil-cart-total-amount">₹{totalPrice.toFixed(2)}</span>
                   </div>
                   {totalSavings > 0 && (
