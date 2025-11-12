@@ -496,6 +496,7 @@ const OrderConfirmation = () => {
       </div>
     );
   }
+  console.log('Rendering order details:', orderDetails);
 
   return (
     <div className="order-confirmation-page">

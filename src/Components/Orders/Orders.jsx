@@ -94,7 +94,6 @@ const Orders = () => {
   const filterAndSortOrders = () => {
     let filtered = [...orders];
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(order => 
         order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,14 +103,12 @@ const Orders = () => {
       );
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(order => 
         order.orderStatus.toLowerCase() === statusFilter.toLowerCase()
       );
     }
 
-    // Sort orders
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
@@ -200,6 +197,18 @@ const Orders = () => {
     } catch {
       return null;
     }
+  };
+
+  // Helper to format payment method
+  const formatPaymentMethod = (method) => {
+    if (!method) return 'Unknown';
+    const map = {
+      'card': 'Credit/Debit Card',
+      'netbanking': 'Net Banking',
+      'upi': 'UPI',
+      'wallet': 'Wallet'
+    };
+    return map[method.toLowerCase()] || method.charAt(0).toUpperCase() + method.slice(1);
   };
 
   const OrderCard = ({ order }) => {
@@ -298,7 +307,6 @@ const Orders = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
       <div className="filters-section">
         <div className="search-box">
           <Search size={18} />
@@ -344,7 +352,6 @@ const Orders = () => {
         </div>
       </div>
 
-      {/* Orders Count */}
       <div className="orders-count">
         {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''} found
       </div>
@@ -401,9 +408,7 @@ const Orders = () => {
                 </div>
               ) : orderDetails ? (
                 <div className="order-details-layout">
-                  {/* Main Content */}
                   <div className="order-main-content">
-                    {/* Order Items */}
                     <div className="order-items-section">
                       <h3>Order Items</h3>
                       <div className="order-items-list">
@@ -436,7 +441,6 @@ const Orders = () => {
                       </div>
                     </div>
 
-                    {/* Order Summary */}
                     <div className="order-summary-section">
                       <h3>Order Summary</h3>
                       <div className="summary-grid">
@@ -478,6 +482,12 @@ const Orders = () => {
                       <p className="payment-status">
                         Payment: {orderDetails.razorpayOrderStatus}
                       </p>
+
+                      {/* NEW: Payment Method */}
+                      <div className="payment-method-info">
+                        <CreditCard size={16} />
+                        <span>{formatPaymentMethod(orderDetails.paymentMethod)}</span>
+                      </div>
                     </div>
 
                     {/* Shipping Address */}
