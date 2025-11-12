@@ -6,7 +6,7 @@ import { CreditCard, ArrowLeft, MapPin, Package, IndianRupee, CheckCircle, Plus,
 import { FaCreditCard, FaLock } from 'react-icons/fa';
 import './Payment.css';
 
-// Helper function to calculate cart totals from the live cart
+// Helper function to calculate cart totals from the live cart (only for display of discounts/subtotal before shipping)
 const calculateCartTotals = (cartItems) => {
     let originalAmount = 0;
     let subtotalAmount = 0;
@@ -42,7 +42,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
     const [error, setError] = useState('');
     const [currentOrderDetails, setCurrentOrderDetails] = useState(null);
 
-    // Calculate cart totals
+    // Calculate cart totals (only item-level calculations)
     const cartTotals = useMemo(() => calculateCartTotals(cart), [cart]);
 
     // Initialize order details
@@ -64,10 +64,10 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                 originalAmount,
                 subtotalAmount,
                 productDiscountAmount,
-                shippingcharges: 0,
-                orderDiscountAmount: 0,
-                totalTaxAmount: 0,
-                totalAmount: subtotalAmount,
+                shippingcharges: 0, // Will be updated by initiate API
+                orderDiscountAmount: 0, // Will be updated by initiate API
+                totalTaxAmount: 0, // Will be updated by initiate API
+                totalAmount: subtotalAmount, // Temporary, will be updated by initiate API
                 orderId: `temp-${Date.now()}`,
                 tempOrderId: null, // Will be set after /initiate
             };
@@ -75,7 +75,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         }
     }, [cart.length, initialOrderDetails, cartTotals]);
 
-    // Recalculate shipping & totals
+    // Recalculate shipping & totals (API call)
     const recalculateOrderDetails = useCallback(async () => {
         if (!shippingAddress?.pincode || cart.length === 0) {
             return;
@@ -106,11 +106,14 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
             if (response.status === 201 && response.data.status === 'success') {
                 const newDetails = response.data.data;
+                
+                // CRITICAL FIX: Use the complete order details returned from the backend.
                 setCurrentOrderDetails(prev => ({
                     ...prev,
-                    ...newDetails,
+                    ...newDetails, // Overwrites all fields with accurate server calculations
                     tempOrderId: newDetails.tempOrderId, // CRITICAL: Save tempOrderId
-                    shippingcharges: newDetails.shippingAmount || 0,
+                    shippingcharges: newDetails.shippingAmount || 0, // Use the official shipping amount
+                    totalAmount: newDetails.totalAmount, // Use the official final total
                 }));
                 setError('');
             } else {
@@ -126,9 +129,13 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
         } finally {
             setFetchingShipping(false);
         }
-    }, [cart, shippingAddress, billingAddress]);
+    }, [cart, shippingAddress, billingAddress]); // Added cart to dependencies to ensure recalculation on cart change
 
-    // Update totals when cart changes
+    /*
+    // NOTE: The local recalculation useEffect is removed/commented out here 
+    // because the logic is now handled by the asynchronous recalculateOrderDetails 
+    // which calls the backend, which is the true source of tax/shipping/final totals.
+    // Keeping this local logic often causes the bug of overriding backend shipping.
     useEffect(() => {
         if (!currentOrderDetails || cart.length === 0) return;
 
@@ -150,9 +157,12 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             totalAmount: calculatedTotal.toFixed(2),
         }));
     }, [cart, cartTotals]);
+    */
 
     // Recalculate on cart or pincode change
+    // This hook is now responsible for triggering the API call
     useEffect(() => {
+        // We ensure a cart length check is done, but the primary check is in recalculateOrderDetails
         if (cart.length > 0 && shippingAddress?.pincode) {
             recalculateOrderDetails();
         }
@@ -193,6 +203,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             if (!orderData.razorpayOrderId) {
                 const token = localStorage.getItem('token');
                 const createOrderResponse = await apiClient.post('/user/orders/create-razorpay-order', {
+                    // Use the final total amount from the latest order details
                     amount: Math.round(parseFloat(orderData.totalAmount) * 100),
                     currency: 'INR'
                 }, {
@@ -618,11 +629,11 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
                                     {fetchingShipping
                                         ? 'Calculating...'
                                         : currentOrderDetails.shippingcharges === undefined ||
-                                          isNaN(parseFloat(currentOrderDetails.shippingcharges))
-                                          ? 'Error: Unable to load shipping charges'
-                                          : parseFloat(currentOrderDetails.shippingcharges) === 0
-                                            ? 'FREE'
-                                            : `₹${parseFloat(currentOrderDetails.shippingcharges).toFixed(2)}`}
+                                            isNaN(parseFloat(currentOrderDetails.shippingcharges))
+                                            ? 'Error: Unable to load shipping charges'
+                                            : parseFloat(currentOrderDetails.shippingcharges) === 0
+                                                ? 'FREE'
+                                                : `₹${parseFloat(currentOrderDetails.shippingcharges).toFixed(2)}`}
                                 </span>
                             </div>
                             {parseFloat(currentOrderDetails.totalTaxAmount || 0) > 0 && (
