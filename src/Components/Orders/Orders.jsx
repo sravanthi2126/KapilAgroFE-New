@@ -68,7 +68,18 @@ const Orders = () => {
       }
     } catch (err) {
       console.error('Error fetching orders:', err);
-      toast.error('Error fetching orders. Please try again.');
+      // --- START OF FIX ---
+      if (err.response && (err.response.status === 403 || err.response.status === 401)) {
+        // Handle 403/401 specifically if client-side check failed
+        toast.error('Session expired or unauthorized. Please log in again.');
+        // Optionally trigger logout event or redirect to login/home
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/'); 
+      } else {
+        toast.error('Error fetching orders. Please try again.');
+      }
+      // --- END OF FIX ---
     } finally {
       setLoading(false);
     }
@@ -483,7 +494,7 @@ const Orders = () => {
                         Payment: {orderDetails.razorpayOrderStatus}
                       </p>
 
-                      {/* NEW: Payment Method */}
+                      {/* Payment Method */}
                       <div className="payment-method-info">
                         <CreditCard size={16} />
                         <span>{formatPaymentMethod(orderDetails.paymentMethod)}</span>
