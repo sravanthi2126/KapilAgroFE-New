@@ -373,28 +373,27 @@
 /* === BUTTONS === */
 .lm-otp-btn {
   width: 100%;
-  background-color: #ecfdf5;
-  color: #10b981;
-  padding: 13px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 0.9rem;
-  border: 2px solid #d1fae5;
+  border: none;
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 0.5rem;
 }
 
 .lm-otp-btn:hover:not(:disabled) {
-  background-color: #d1fae5;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .lm-otp-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .lm-resend-btn {
@@ -420,6 +419,7 @@
   cursor: not-allowed;
 }
 
+/* ====================== SUBMIT BUTTON ====================== */
 .lm-submit-btn {
   width: 100%;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -457,6 +457,7 @@
   left: 100%;
 }
 
+/* Disabled state – no spinner, just dimmed */
 .lm-submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -558,23 +559,15 @@
 /* === LOADING STATES === */
 .lm-otp-btn:disabled,
 .lm-submit-btn:disabled {
-  position: relative;
-  color: transparent;
+  /* no longer needed */
+  /* position: relative; */
+  /* color: transparent; */
 }
 
 .lm-otp-btn:disabled::after,
 .lm-submit-btn:disabled::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
-  border: 2px solid transparent;
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: lm-spin 1s linear infinite;
+  /* remove the pseudo-element spinner */
+  content: none;
 }
 
 .lm-submit-btn:disabled::after {

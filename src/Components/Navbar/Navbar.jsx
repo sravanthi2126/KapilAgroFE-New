@@ -10,7 +10,6 @@ import kapilAgroLogo from '../Assets/kapil agro logo.png';
 import kapilGroupLogo from '../Assets/kapil group.png';
 
 const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set(), isLoginOpen, setIsLoginOpen }) => {
-  console.log('Navbar rendering, isLoginOpen:', isLoginOpen);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -45,7 +44,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     const handleLoginEvent = () => {
       loadUser();
       setIsLoginOpen(false);
-      console.log('userLoggedIn event, setting isLoginOpen to false');
     };
 
     const handleLogoutEvent = () => {
@@ -112,7 +110,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
   };
 
   const handleNavigation = (page) => {
-    setCurrentPage(page);
+    setCurrentPage(page); // Set the current page state immediately
     setIsMobileMenuOpen(false);
     setIsMobileSearchOpen(false);
 
@@ -121,9 +119,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         navigate('/');
-        setTimeout(() => {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 300);
+        // The ScrollToSection component in App.js will handle setting 'home' and scrolling after navigation completes
       }
       return;
     }
@@ -137,15 +133,14 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
       if (window.location.pathname === '/') {
         const sectionId = page === 'about' ? 'fresh-landing' : 'footer';
         if (!scrollToSection(sectionId)) {
-          navigate(`/${page}`);
+          // This path is technically blocked by <Navigate to="/" replace /> in App.js, but keeping logic just in case.
+          navigate(`/${page}`); 
         }
       } else {
         navigate('/');
         setTimeout(() => {
           const sectionId = page === 'about' ? 'fresh-landing' : 'footer';
-          if (!scrollToSection(sectionId)) {
-            navigate(`/${page}`);
-          }
+          scrollToSection(sectionId); // Scroll after navigating to home page
         }, 300);
       }
       return;
@@ -155,7 +150,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
   };
 
   const handleLoginClick = () => {
-    console.log('Login button clicked, setting isLoginOpen to true');
     setIsLoginOpen(true);
     setIsMobileMenuOpen(false);
   };
@@ -201,6 +195,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
           {['home', 'categories', 'about', 'contact', 'orders'].map((page) => (
             <button
               key={page}
+              // The class is correctly applied based on the 'currentPage' state
               className={`kapil-nav-item ${currentPage === page ? 'kapil-nav-item-active' : ''}`}
               onClick={() => handleNavigation(page)}
             >
