@@ -54,7 +54,6 @@ const Address = ({ setIsLoginOpen }) => {
 
       try {
         const response = await apiClient.get(`/api/check-pincode?pincode=${pincode}&payment_type=P`);
-        console.log('Pincode API Response:', response.data); // Debug log
 
         if (response.data.success === 1) {
           if (Array.isArray(response.data.message) && response.data.message.length > 0) {
@@ -226,7 +225,6 @@ const Address = ({ setIsLoginOpen }) => {
         cartItemIds: cartItems.map((item) => item.cartItemId),
       };
 
-      console.log('🚀 Final Order Payload:', payload);
 
       const response = await apiClient.post('/user/orders/initiate', payload, {
         headers: {

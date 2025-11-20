@@ -90,6 +90,54 @@
   opacity: 0.9;
 }
 
+/* Password hint text */
+.lm-hint {
+  color: #666;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* OTP footer (sent to +91... and Resend button) */
+.lm-otp-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #555;
+}
+
+.lm-otp-footer .lm-resend-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+}
+
+.lm-otp-footer .lm-resend-btn:hover {
+  text-decoration: underline;
+}
+
+.lm-otp-footer .lm-resend-btn:disabled {
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Improve OTP section spacing */
+.lm-field-group:has(.lm-otp-input) {
+  margin-bottom: 16px;
+}
+
+/* Ensure resend doesn't wrap */
+.lm-otp-footer {
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+
 /* === SCROLLABLE CONTENT === */
 .lm-content {
   max-height: calc(90vh - 140px); /* CHANGED: Adjusted to match new container height */
@@ -325,28 +373,27 @@
 /* === BUTTONS === */
 .lm-otp-btn {
   width: 100%;
-  background-color: #ecfdf5;
-  color: #10b981;
-  padding: 13px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 0.9rem;
-  border: 2px solid #d1fae5;
+  border: none;
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 0.5rem;
 }
 
 .lm-otp-btn:hover:not(:disabled) {
-  background-color: #d1fae5;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .lm-otp-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .lm-resend-btn {
@@ -372,6 +419,7 @@
   cursor: not-allowed;
 }
 
+/* ====================== SUBMIT BUTTON ====================== */
 .lm-submit-btn {
   width: 100%;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -409,6 +457,7 @@
   left: 100%;
 }
 
+/* Disabled state – no spinner, just dimmed */
 .lm-submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -510,23 +559,15 @@
 /* === LOADING STATES === */
 .lm-otp-btn:disabled,
 .lm-submit-btn:disabled {
-  position: relative;
-  color: transparent;
+  /* no longer needed */
+  /* position: relative; */
+  /* color: transparent; */
 }
 
 .lm-otp-btn:disabled::after,
 .lm-submit-btn:disabled::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
-  border: 2px solid transparent;
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: lm-spin 1s linear infinite;
+  /* remove the pseudo-element spinner */
+  content: none;
 }
 
 .lm-submit-btn:disabled::after {
