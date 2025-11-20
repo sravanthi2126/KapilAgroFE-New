@@ -29,142 +29,142 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
   const categoryName = state?.categoryName || 'All Products';
   const navigate = useNavigate();
 
-const fetchProducts = useCallback(async (page = 1) => {
-  setLoading(true);
-  setError(null);
-  setCurrentPageState(page);
+  const fetchProducts = useCallback(async (page = 1) => {
+    setLoading(true);
+    setError(null);
+    setCurrentPageState(page);
 
-  try {
-    const url = categoryId === 'all'
-      ? `/user/products?page=${page}&size=${pageSize}`
-      : `/user/products/category/${categoryId}?page=${page}&size=${pageSize}`;
+    try {
+      const url = categoryId === 'all'
+        ? `/user/products?page=${page}&size=${pageSize}`
+        : `/user/products/category/${categoryId}?page=${page}&size=${pageSize}`;
 
-    const response = await apiClient.get(url);
+      const response = await apiClient.get(url);
 
-    if (response.status === 200 && response.data.status === 'success') {
-      const responseData = response.data.data;
-      
-      // Check if response has pagination structure
-      let productsArray;
-      let paginationInfo = {
-        totalPages: 1,
-        totalProducts: 0
-      };
+      if (response.status === 200 && response.data.status === 'success') {
+        const responseData = response.data.data;
 
-      // Handle different possible response structures
-      if (Array.isArray(responseData)) {
-        // Case 1: Direct array of products
-        productsArray = responseData;
-        paginationInfo.totalProducts = responseData.length;
-      } else if (responseData.products && Array.isArray(responseData.products)) {
-        // Case 2: { products: [], totalPages, totalProducts, currentPage }
-        productsArray = responseData.products;
-        paginationInfo.totalPages = responseData.totalPages || 1;
-        paginationInfo.totalProducts = responseData.totalProducts || responseData.products.length;
-        paginationInfo.currentPage = responseData.currentPage || page;
-      } else if (responseData.content && Array.isArray(responseData.content)) {
-        // Case 3: Spring Boot pagination format { content: [], totalPages, totalElements, etc }
-        productsArray = responseData.content;
-        paginationInfo.totalPages = responseData.totalPages || 1;
-        paginationInfo.totalProducts = responseData.totalElements || responseData.content.length;
+        // Check if response has pagination structure
+        let productsArray;
+        let paginationInfo = {
+          totalPages: 1,
+          totalProducts: 0
+        };
+
+        // Handle different possible response structures
+        if (Array.isArray(responseData)) {
+          // Case 1: Direct array of products
+          productsArray = responseData;
+          paginationInfo.totalProducts = responseData.length;
+        } else if (responseData.products && Array.isArray(responseData.products)) {
+          // Case 2: { products: [], totalPages, totalProducts, currentPage }
+          productsArray = responseData.products;
+          paginationInfo.totalPages = responseData.totalPages || 1;
+          paginationInfo.totalProducts = responseData.totalProducts || responseData.products.length;
+          paginationInfo.currentPage = responseData.currentPage || page;
+        } else if (responseData.content && Array.isArray(responseData.content)) {
+          // Case 3: Spring Boot pagination format { content: [], totalPages, totalElements, etc }
+          productsArray = responseData.content;
+          paginationInfo.totalPages = responseData.totalPages || 1;
+          paginationInfo.totalProducts = responseData.totalElements || responseData.content.length;
+        } else {
+          // Fallback: assume it's the products array
+          productsArray = responseData;
+          paginationInfo.totalProducts = responseData.length;
+        }
+
+        console.log('API Response structure:', {
+          responseData,
+          productsArray,
+          paginationInfo
+        });
+
+        // If no products found
+        if (!productsArray || productsArray.length === 0) {
+          setProducts([]);
+          setTotalPages(1);
+          setTotalProducts(0);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch variants for all products
+        const productsWithVariants = await Promise.all(
+          productsArray.map(async (product) => {
+            try {
+              const variantResponse = await apiClient.get(
+                `/user/product-variants/product/${product.productId}`
+              );
+
+              // Determine product category
+              const category = product.category ? product.category.toLowerCase() : '';
+              const productName = product.productName ? product.productName.toLowerCase() : '';
+              const isPlant = category === 'plants' ||
+                category.includes('plant') ||
+                productName.includes('plant');
+              const isFertilizer = category === 'fertilizers' ||
+                category === 'fertilizer' ||
+                category.includes('urea') ||
+                category.includes('vermicompost') ||
+                productName.includes('urea') ||
+                productName.includes('vermicompost') ||
+                productName.includes('fertilizer');
+
+              return {
+                ...product,
+                variants:
+                  variantResponse.status === 200 &&
+                    variantResponse.data.status === 'success'
+                    ? variantResponse.data.data.map((variant) => ({
+                      ...variant,
+                      unitOfMeasurement: variant.unitOfMeasurement || null,
+                    }))
+                    : [],
+                isPlant: isPlant,
+                isFertilizer: isFertilizer,
+                categoryType: isPlant ? 'plant' : isFertilizer ? 'fertilizer' : 'other'
+              };
+            } catch (err) {
+              console.error(
+                `Error fetching variants for product ${product.productId}:`,
+                err
+              );
+              return { ...product, variants: [] };
+            }
+          })
+        );
+
+        setProducts(productsWithVariants);
+        setTotalPages(paginationInfo.totalPages);
+        setTotalProducts(paginationInfo.totalProducts);
+
+        // Update current page if provided by backend
+        if (paginationInfo.currentPage) {
+          setCurrentPageState(paginationInfo.currentPage);
+        }
       } else {
-        // Fallback: assume it's the products array
-        productsArray = responseData;
-        paginationInfo.totalProducts = responseData.length;
+        setError('Failed to fetch products: Invalid response format');
       }
-
-      console.log('API Response structure:', {
-        responseData,
-        productsArray,
-        paginationInfo
-      });
-
-      // If no products found
-      if (!productsArray || productsArray.length === 0) {
-        setProducts([]);
-        setTotalPages(1);
-        setTotalProducts(0);
-        setLoading(false);
-        return;
+    } catch (err) {
+      console.error('Products fetch error:', err);
+      if (err.response && err.response.status === 403) {
+        setError('Please log in to view products');
+        setIsLoginOpen(true);
+      } else if (err.response && err.response.status === 401) {
+        setError('Session expired. Please log in again');
+        localStorage.removeItem('token');
+        setIsLoginOpen(true);
+      } else if (err.code === 'ECONNABORTED') {
+        setError('Request timeout. Please check your connection and try again');
+      } else if (!err.response) {
+        setError('Network error. Please check your connection');
+      } else {
+        setError('Error fetching products: ' + (err.response?.data?.message || err.message));
       }
-
-      // Fetch variants for all products
-      const productsWithVariants = await Promise.all(
-        productsArray.map(async (product) => {
-          try {
-            const variantResponse = await apiClient.get(
-              `/user/product-variants/product/${product.productId}`
-            );
-
-            // Determine product category
-            const category = product.category ? product.category.toLowerCase() : '';
-            const productName = product.productName ? product.productName.toLowerCase() : '';
-            const isPlant = category === 'plants' ||
-              category.includes('plant') ||
-              productName.includes('plant');
-            const isFertilizer = category === 'fertilizers' ||
-              category === 'fertilizer' ||
-              category.includes('urea') ||
-              category.includes('vermicompost') ||
-              productName.includes('urea') ||
-              productName.includes('vermicompost') ||
-              productName.includes('fertilizer');
-
-            return {
-              ...product,
-              variants:
-                variantResponse.status === 200 &&
-                  variantResponse.data.status === 'success'
-                  ? variantResponse.data.data.map((variant) => ({
-                    ...variant,
-                    unitOfMeasurement: variant.unitOfMeasurement || null,
-                  }))
-                  : [],
-              isPlant: isPlant,
-              isFertilizer: isFertilizer,
-              categoryType: isPlant ? 'plant' : isFertilizer ? 'fertilizer' : 'other'
-            };
-          } catch (err) {
-            console.error(
-              `Error fetching variants for product ${product.productId}:`,
-              err
-            );
-            return { ...product, variants: [] };
-          }
-        })
-      );
-
-      setProducts(productsWithVariants);
-      setTotalPages(paginationInfo.totalPages);
-      setTotalProducts(paginationInfo.totalProducts);
-      
-      // Update current page if provided by backend
-      if (paginationInfo.currentPage) {
-        setCurrentPageState(paginationInfo.currentPage);
-      }
-    } else {
-      setError('Failed to fetch products: Invalid response format');
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('Products fetch error:', err);
-    if (err.response && err.response.status === 403) {
-      setError('Please log in to view products');
-      setIsLoginOpen(true);
-    } else if (err.response && err.response.status === 401) {
-      setError('Session expired. Please log in again');
-      localStorage.removeItem('token');
-      setIsLoginOpen(true);
-    } else if (err.code === 'ECONNABORTED') {
-      setError('Request timeout. Please check your connection and try again');
-    } else if (!err.response) {
-      setError('Network error. Please check your connection');
-    } else {
-      setError('Error fetching products: ' + (err.response?.data?.message || err.message));
-    }
-  } finally {
-    setLoading(false);
-  }
-}, [categoryId, setIsLoginOpen, pageSize]);
+  }, [categoryId, setIsLoginOpen, pageSize]);
 
   useEffect(() => {
     setCurrentPage('categories');
@@ -715,15 +715,12 @@ const fetchProducts = useCallback(async (page = 1) => {
         <>
           <div className="products-grid">
             {products.map((product) => {
-              const minPriceVariant = product.variants.reduce(
-                (min, variant) =>
-                  !min || variant.afterDiscountAmount < min.afterDiscountAmount
-                    ? variant
-                    : min,
-                null
-              );
+              // Find the selected variant for this product
+              const selectedVariant = product.variants.find(
+                variant => variant.variantId === (product.selectedVariantId || product.variants[0]?.variantId)
+              ) || product.variants[0];
 
-              const discount = minPriceVariant ? calculateDiscount(minPriceVariant) : null;
+              const discount = selectedVariant ? calculateDiscount(selectedVariant) : null;
 
               return (
                 <div
@@ -761,18 +758,21 @@ const fetchProducts = useCallback(async (page = 1) => {
                   <div className="product-info">
                     <h3 className="product-title">{product.productName}</h3>
 
-                    {minPriceVariant && (
+                    {selectedVariant && (
                       <div className="product-price">
                         <span className="current-price">
-                          ₹{minPriceVariant.afterDiscountAmount}
+                          ₹{selectedVariant.afterDiscountAmount}
                         </span>
-                        {minPriceVariant.unitOfMeasurement && (
-                          <span className="unit-measurement">({minPriceVariant.unitOfMeasurement})</span>
+                        {selectedVariant.unitOfMeasurement && (
+                          <span className="unit-measurement">({selectedVariant.unitOfMeasurement})</span>
                         )}
-                        {hasDiscount(minPriceVariant) && (
+                        {hasDiscount(selectedVariant) && (
                           <span className="original-price">
-                            ₹{minPriceVariant.originalAmount}
+                            ₹{selectedVariant.originalAmount}
                           </span>
+                        )}
+                        {discount && (
+                          <span className="discount-percentage">({discount}% OFF)</span>
                         )}
                       </div>
                     )}
@@ -783,23 +783,32 @@ const fetchProducts = useCallback(async (page = 1) => {
                           className="variant-dropdown"
                           onClick={(e) => e.stopPropagation()}
                           onChange={(e) => {
-                            const variantId = e.target.value;
-                            const variant = product.variants.find(
-                              (v) => v.variantId === parseInt(variantId)
+                            const variantId = parseInt(e.target.value);
+                            // Update the selected variant for this product
+                            const updatedProducts = products.map(p =>
+                              p.productId === product.productId
+                                ? { ...p, selectedVariantId: variantId }
+                                : p
                             );
-                            selectVariant(variant);
+                            setProducts(updatedProducts);
                           }}
-                          defaultValue={minPriceVariant?.variantId || ''}
+                          value={selectedVariant?.variantId || ''}
                         >
-                          {product.variants.map((variant) => (
-                            <option
-                              key={variant.variantId}
-                              value={variant.variantId}
-                            >
-                              {variant.variantName} - ₹{variant.afterDiscountAmount}
-                              {variant.unitOfMeasurement ? ` (${variant.unitOfMeasurement})` : ''}
-                            </option>
-                          ))}
+                          {product.variants.map((variant) => {
+                            const variantDiscount = calculateDiscount(variant);
+                            const variantHasDiscount = hasDiscount(variant);
+
+                            return (
+                              <option
+                                key={variant.variantId}
+                                value={variant.variantId}
+                              >
+                                {variant.variantName} - ₹{variant.afterDiscountAmount}
+                                {variant.unitOfMeasurement ? ` (${variant.unitOfMeasurement})` : ''}
+                                {variantHasDiscount && ` - ${variantDiscount}% OFF`}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                     )}

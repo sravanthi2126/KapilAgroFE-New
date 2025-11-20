@@ -72,7 +72,7 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
-  height: 380px; /* Reduced from 450px */
+  height: 400px; /* Reduced from 450px */
   display: flex;
   flex-direction: column;
   border: 1px solid #f0f0f0;
@@ -1060,4 +1060,34 @@
     width: 100%;
     justify-content: center;
   }
+}
+
+
+
+.discount-percentage {
+  color: #ff4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.product-price {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.5rem 0;
+}
+
+
+
+.plant-year-info {
+  font-size: 0.9rem;
+  color: #2d5016;
+  font-weight: 600;
+  margin: 0.25rem 0;
+  background: #f0f8e8;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
 }
