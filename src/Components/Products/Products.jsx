@@ -638,7 +638,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
               )}
 
               <div className="product-detail-description-container">
-                <h3 className="product-detail-description-heading">Description</h3>
+                <h3 className="product-detail-description-heading"> Product Description</h3>
                 <p className="product-detail-description">
                   {currentProduct.description || 'No description available.'}
                 </p>
