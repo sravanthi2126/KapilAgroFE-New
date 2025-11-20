@@ -8,6 +8,9 @@ import Cart from '../Cart/Cart';
 import LoginModal from './LoginModal';
 import kapilAgroLogo from '../Assets/kapil agro logo.png';
 import kapilGroupLogo from '../Assets/kapil group.png';
+// ADD THESE IMPORTS
+import { isTokenExpired, scheduleTokenRefresh, setupAutoLogout } from '../../services/authService';
+
 
 const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set(), isLoginOpen, setIsLoginOpen }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -16,6 +19,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
   const navigate = useNavigate();
   const location = useLocation();
 
+
   useEffect(() => {
     const loadUser = () => {
       const storedUser = localStorage.getItem('user');
@@ -23,7 +27,19 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
 
       if (storedUser && token) {
         try {
+          // Check if token is expired
+          if (isTokenExpired(token)) {
+            console.log('Token expired during page load, auto-logging out');
+            handleLogout();
+            return;
+          }
+
           setUser(JSON.parse(storedUser));
+
+          // Schedule token refresh and auto-logout
+          scheduleTokenRefresh();
+          setupAutoLogout();
+
         } catch (error) {
           console.error('Error parsing user data:', error);
           handleLogout();
@@ -44,36 +60,40 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     const handleLoginEvent = () => {
       loadUser();
       setIsLoginOpen(false);
+      console.log('userLoggedIn event, setting isLoginOpen to false');
+
+      // Setup auto-logout for new login
+      const token = localStorage.getItem('token');
+      if (token && !isTokenExpired(token)) {
+        setupAutoLogout();
+      }
     };
 
     const handleLogoutEvent = () => {
-      setIsLoginOpen(true);
+      // setIsLoginOpen(true);
       setUser(null);
       setCart([]);
       setIsMobileMenuOpen(false);
-      // Toast removed from here to prevent duplicates
     };
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('userLoggedIn', handleLoginEvent);
     window.addEventListener('userLoggedOut', handleLogoutEvent);
 
-    const intervalId = setInterval(loadUser, 24 * 60 * 60 * 1000);
-
+    // Cleanup function
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('userLoggedIn', handleLoginEvent);
       window.removeEventListener('userLoggedOut', handleLogoutEvent);
-      clearInterval(intervalId);
     };
   }, [setIsLoginOpen, setCart]);
 
   // Click outside to close mobile menu
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isMobileMenuOpen && 
-          !event.target.closest('.kapil-navbar-mobile-menu') && 
-          !event.target.closest('.kapil-navbar-mobile-toggle')) {
+      if (isMobileMenuOpen &&
+        !event.target.closest('.kapil-navbar-mobile-menu') &&
+        !event.target.closest('.kapil-navbar-mobile-toggle')) {
         setIsMobileMenuOpen(false);
       }
     };
@@ -290,8 +310,8 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
       )}
 
       {isMobileMenuOpen && (
-        <div 
-          className="kapil-navbar-mobile-menu show-mobile-menu" 
+        <div
+          className="kapil-navbar-mobile-menu show-mobile-menu"
           style={{ display: 'flex' }}
           onClick={(e) => e.stopPropagation()}
         >

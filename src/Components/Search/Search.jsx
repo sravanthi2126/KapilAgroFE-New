@@ -26,6 +26,7 @@ const Search = ({ isMobile = false, setCurrentPage }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // In Search.jsx, update the fetchSuggestions function:
   const fetchSuggestions = async (searchQuery) => {
     if (!searchQuery.trim()) {
       setSuggestions([]);
@@ -35,9 +36,11 @@ const Search = ({ isMobile = false, setCurrentPage }) => {
 
     setLoading(true);
     try {
-      const response = await apiClient.get(`/user/products/search?query=${encodeURIComponent(searchQuery)}`);
+      const response = await apiClient.get(`/user/products/search?query=${encodeURIComponent(searchQuery)}&page=1&size=5`);
       if (response.status === 200 && response.data.status === 'success') {
-        setSuggestions(response.data.data);
+        // Handle both paginated response (data.products) and non-paginated response (data array)
+        const suggestionsData = response.data.data.products || response.data.data || [];
+        setSuggestions(suggestionsData);
         setShowDropdown(true);
       } else {
         toast.error('Failed to fetch search results');
