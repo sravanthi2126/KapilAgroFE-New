@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Mail, Smartphone, Eye, EyeOff, Loader } from 'lucide-react';
 import { showSuccess, showError, showInfo } from '../../../utils/toastUtils';
-import { authAPI, scheduleTokenRefresh } from '../../../services/authService';
+import { authAPI, scheduleTokenRefresh, setupAutoLogout } from '../../../services/authService';
 
 const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => {
   const [loginMethod, setLoginMethod] = useState('email');
@@ -64,8 +64,17 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
     }
   };
 
+  // In LoginForm.jsx - Update the handleAuthSuccess function:
+
   const handleAuthSuccess = async (result) => {
     try {
+      // Check if user role is admin
+      if (result.data.role === 'admin') {
+        showError('Admins cannot login through customer portal. Please use admin login.');
+        setIsLoading(false);
+        return;
+      }
+
       const userInfo = {
         userId: result.data.userId,
         name: result.data.name,
@@ -84,6 +93,10 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
 
       await fetchCart();
       scheduleTokenRefresh();
+
+      // ADD THIS LINE - Setup auto-logout for 5-minute expiry
+      setupAutoLogout();
+
       window.dispatchEvent(new CustomEvent('userLoggedIn'));
       setCurrentPage('home');
       showSuccess('Logged in successfully');
@@ -163,14 +176,35 @@ const LoginForm = ({ setIsOpen, setCurrentPage, setCart, switchToRegister }) => 
 
       if (loginMethod === 'email') {
         result = await authAPI.loginWithEmail(formData.email, formData.password);
+
+        // Check for admin restriction in the response
+        if (result.data?.role === 'admin') {
+          showError('Admins cannot login through customer portal. Please use admin login.');
+          setIsLoading(false);
+          return;
+        }
+
         await handleAuthSuccess(result);
       } else if (loginMethod === 'phone' && showOTPField) {
         result = await authAPI.verifyLoginOTP(formatPhoneNumber(formData.phoneNo), formData.otp);
+
+        // Check for admin restriction in the response
+        if (result.data?.role === 'admin') {
+          showError('Admins cannot login through customer portal. Please use admin login.');
+          setIsLoading(false);
+          return;
+        }
+
         await handleAuthSuccess(result);
       }
     } catch (error) {
       console.error('API error:', error);
-      if (error.response?.status === 404) {
+
+      // Handle admin restriction error from backend
+      if (error.response?.data?.message?.includes('admin') ||
+        error.response?.data?.code === 'ADMIN_ACCESS_RESTRICTED') {
+        showError('Admins cannot login through customer portal. Please use admin login.');
+      } else if (error.response?.status === 404) {
         showError(`${loginMethod === 'email' ? 'Email' : 'Phone number'} not registered. Please sign up first.`);
         switchToRegister();
       } else if (error.message?.includes('timeout')) {

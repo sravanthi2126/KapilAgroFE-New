@@ -77,7 +77,8 @@ export const scheduleTokenRefresh = () => {
     const currentTime = Math.floor(Date.now() / 1000);
     const expiresIn = decoded.exp - currentTime;
     
-    const refreshTime = (expiresIn - 60) * 1000;
+    // Refresh 30 seconds before expiry (for 5-minute tokens)
+    const refreshTime = (expiresIn - 30) * 1000;
 
     if (refreshTime > 0) {
       setTimeout(async () => {
@@ -92,6 +93,39 @@ export const scheduleTokenRefresh = () => {
     }
   } catch (error) {
     console.error('Error scheduling token refresh:', error);
+  }
+};
+
+// Auto-logout when token expires
+export const setupAutoLogout = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const decoded = jwtDecode(token);
+    const expiresAt = decoded.exp * 1000; // Convert to milliseconds
+    const now = Date.now();
+    const timeUntilExpiry = expiresAt - now;
+
+    if (timeUntilExpiry > 0) {
+      console.log(`Auto-logout scheduled in ${Math.round(timeUntilExpiry / 1000)} seconds`);
+      
+      setTimeout(() => {
+        console.log('Token expired, auto-logging out...');
+        clearAuth();
+        window.dispatchEvent(new CustomEvent('userLoggedOut'));
+        if (window.showInfo) {
+          window.showInfo('Your session has expired. Please login again.');
+        }
+      }, timeUntilExpiry);
+    } else {
+      // Token already expired
+      console.log('Token already expired, logging out immediately');
+      clearAuth();
+      window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    }
+  } catch (error) {
+    console.error('Error setting up auto-logout:', error);
   }
 };
 
@@ -303,9 +337,21 @@ export const getAuthToken = () => {
 
 // Helper function to clear authentication
 export const clearAuth = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('refreshToken');
+  const itemsToRemove = [
+    'token',
+    'refreshToken', 
+    'user',
+    'userId',
+    'role',
+    'name',
+    'email',
+    'phoneNo'
+  ];
+  
+  itemsToRemove.forEach(item => localStorage.removeItem(item));
   delete apiClient.defaults.headers.Authorization;
+  
+  console.log('Authentication cleared - user logged out');
 };
 
 export const validateAndRefreshToken = async () => {

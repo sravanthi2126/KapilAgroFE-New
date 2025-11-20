@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Heart, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { Heart, ArrowLeft, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { apiClient } from '../../services/authService';
@@ -17,49 +17,64 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPageState] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [pageSize] = useState(12); // Products per page
+
   const { categoryId } = useParams();
   const { state } = useLocation();
   const categoryName = state?.categoryName || 'All Products';
   const navigate = useNavigate();
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (page = 1) => {
     setLoading(true);
     setError(null);
+    setCurrentPageState(page);
 
     try {
-      const url = categoryId === 'all' ? '/user/products' : `/user/products/category/${categoryId}`;
+      const url = categoryId === 'all'
+        ? `/user/products?page=${page}&size=${pageSize}`
+        : `/user/products/category/${categoryId}?page=${page}&size=${pageSize}`;
+
       const response = await apiClient.get(url);
+
       if (response.status === 200 && response.data.status === 'success') {
+        const responseData = response.data.data;
+
+        // Fetch variants for all products
         const productsWithVariants = await Promise.all(
-          response.data.data.map(async (product) => {
+          responseData.map(async (product) => { // ✅ LINE 38 FIXED - removed .products
             try {
               const variantResponse = await apiClient.get(
                 `/user/product-variants/product/${product.productId}`
               );
-              
+
               // Determine product category
               const category = product.category ? product.category.toLowerCase() : '';
               const productName = product.productName ? product.productName.toLowerCase() : '';
-              const isPlant = category === 'plants' || 
-                            category.includes('plant') || 
-                            productName.includes('plant');
-              const isFertilizer = category === 'fertilizers' || 
-                               category === 'fertilizer' ||
-                               category.includes('urea') ||
-                               category.includes('vermicompost') ||
-                               productName.includes('urea') ||
-                               productName.includes('vermicompost') ||
-                               productName.includes('fertilizer');
+              const isPlant = category === 'plants' ||
+                category.includes('plant') ||
+                productName.includes('plant');
+              const isFertilizer = category === 'fertilizers' ||
+                category === 'fertilizer' ||
+                category.includes('urea') ||
+                category.includes('vermicompost') ||
+                productName.includes('urea') ||
+                productName.includes('vermicompost') ||
+                productName.includes('fertilizer');
 
               return {
                 ...product,
                 variants:
                   variantResponse.status === 200 &&
-                  variantResponse.data.status === 'success'
+                    variantResponse.data.status === 'success'
                     ? variantResponse.data.data.map((variant) => ({
-                        ...variant,
-                        unitOfMeasurement: variant.unitOfMeasurement || null,
-                      }))
+                      ...variant,
+                      unitOfMeasurement: variant.unitOfMeasurement || null,
+                    }))
                     : [],
                 isPlant: isPlant,
                 isFertilizer: isFertilizer,
@@ -74,7 +89,10 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
             }
           })
         );
+
         setProducts(productsWithVariants);
+        setTotalPages(1); 
+        setTotalProducts(responseData.length); 
       } else {
         setError('Failed to fetch products');
       }
@@ -97,11 +115,11 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
     } finally {
       setLoading(false);
     }
-  }, [categoryId, setIsLoginOpen]);
+  }, [categoryId, setIsLoginOpen, pageSize]);
 
   useEffect(() => {
     setCurrentPage('categories');
-    fetchProducts();
+    fetchProducts(1);
 
     if (state?.product) {
       setCurrentProduct(state.product);
@@ -111,6 +129,15 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
     }
   }, [categoryId, setCurrentPage, fetchProducts, state]);
 
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      fetchProducts(newPage);
+      // Scroll to top when page changes
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Rest of your existing functions remain the same...
   const showProductDetail = (product) => {
     setCurrentProduct(product);
     setSelectedVariant(product.variants[0] || null);
@@ -219,7 +246,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
       toast.error('Please select a product variant');
       return;
     }
-    
+
     const token = localStorage.getItem('token');
     if (!token) {
       toast.error('Please log in to proceed with purchase');
@@ -230,7 +257,6 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
     setBuyingNow(true);
 
     try {
-      // Add item to cart first
       const payload = {
         variantId: selectedVariant.variantId,
         quantity: 1,
@@ -246,7 +272,6 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
       });
 
       if (response.status === 201 && response.data.status === 'success') {
-        // Fetch updated cart
         const cartResponse = await apiClient.get('/user/cart/usercart');
         if (cartResponse.status === 200 && cartResponse.data.status === 'success') {
           const detailedCart = cartResponse.data.data.map((item) => ({
@@ -258,8 +283,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
             unit_of_measurement: item.unitOfMeasurement || null,
           }));
           setCart(detailedCart);
-          
-          // Navigate to address page
+
           navigate('/address', { state: { cartItems: detailedCart } });
         }
       } else {
@@ -298,44 +322,99 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
   };
 
   const hasDiscount = (variant) => {
-    return variant && variant.originalAmount && variant.afterDiscountAmount && 
-           variant.originalAmount > variant.afterDiscountAmount;
+    return variant && variant.originalAmount && variant.afterDiscountAmount &&
+      variant.originalAmount > variant.afterDiscountAmount;
   };
 
- const getCurrentPrice = (variant, plantAge) => {
-  if (!variant) return { current: 0, original: 0 };
-  
-  if (currentProduct?.isPlant && plantAge) {
-    // If your API provides plant age specific pricing in variants
-    const ageSpecificVariant = currentProduct.variants.find(v => 
-      v.plantAge === plantAge || v.variantName.includes(`${plantAge} Year`)
-    );
-    
-    if (ageSpecificVariant) {
+  const getCurrentPrice = (variant, plantAge) => {
+    if (!variant) return { current: 0, original: 0 };
+
+    if (currentProduct?.isPlant && plantAge) {
+      const ageSpecificVariant = currentProduct.variants.find(v =>
+        v.plantAge === plantAge || v.variantName.includes(`${plantAge} Year`)
+      );
+
+      if (ageSpecificVariant) {
+        return {
+          current: ageSpecificVariant.afterDiscountAmount || ageSpecificVariant.originalAmount,
+          original: ageSpecificVariant.originalAmount
+        };
+      }
+
+      const basePrice = variant.afterDiscountAmount || variant.originalAmount;
+      const ageMultiplier = { '1': 1, '2': 1.5, '3': 2 }[plantAge] || 1;
+      const calculatedPrice = basePrice * ageMultiplier;
+
       return {
-        current: ageSpecificVariant.afterDiscountAmount || ageSpecificVariant.originalAmount,
-        original: ageSpecificVariant.originalAmount
+        current: calculatedPrice,
+        original: hasDiscount(variant)
+          ? calculatedPrice / (1 - (calculateDiscount(variant) || 0) / 100)
+          : calculatedPrice
       };
     }
-    
-    // Fallback to multiplier calculation
-    const basePrice = variant.afterDiscountAmount || variant.originalAmount;
-    const ageMultiplier = { '1': 1, '2': 1.5, '3': 2 }[plantAge] || 1;
-    const calculatedPrice = basePrice * ageMultiplier;
-    
+
     return {
-      current: calculatedPrice,
-      original: hasDiscount(variant) 
-        ? calculatedPrice / (1 - (calculateDiscount(variant) || 0) / 100)
-        : calculatedPrice
+      current: variant.afterDiscountAmount || variant.originalAmount,
+      original: variant.originalAmount
     };
-  }
-  
-  return {
-    current: variant.afterDiscountAmount || variant.originalAmount,
-    original: variant.originalAmount
   };
-};
+
+  // Pagination Component
+  const Pagination = () => {
+    if (totalPages <= 1) return null;
+
+    const renderPageNumbers = () => {
+      const pages = [];
+      const maxVisiblePages = 5;
+
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(
+          <button
+            key={i}
+            onClick={() => handlePageChange(i)}
+            className={`pagination-page ${currentPage === i ? 'active' : ''}`}
+          >
+            {i}
+          </button>
+        );
+      }
+
+      return pages;
+    };
+
+    return (
+      <div className="pagination-container">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="pagination-btn pagination-prev"
+        >
+          <ChevronLeft size={16} />
+          Previous
+        </button>
+
+        <div className="pagination-pages">
+          {renderPageNumbers()}
+        </div>
+
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="pagination-btn pagination-next"
+        >
+          Next
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -368,7 +447,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
         <div className="error-message">
           {error}
           <button
-            onClick={fetchProducts}
+            onClick={() => fetchProducts(1)}
             style={{
               marginTop: '1rem',
               padding: '0.5rem 1rem',
@@ -418,9 +497,8 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
                   {images.map((image, index) => (
                     <div
                       key={index}
-                      className={`sub-image-container ${
-                        mainImageIndex === index ? 'selected' : ''
-                      }`}
+                      className={`sub-image-container ${mainImageIndex === index ? 'selected' : ''
+                        }`}
                       onClick={() => setMainImageIndex(index)}
                     >
                       <img
@@ -446,7 +524,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
               </p>
 
               {/* Plant Age Selector - Only for plants */}
-{/* {currentProduct.isPlant && (
+              {/* {currentProduct.isPlant && (
   <div className="plant-age-section">
     <h3 className="variant-title">Choose Plant Age:</h3>
     <div className="plant-age-options">
@@ -474,13 +552,12 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
                     {currentProduct.variants.map((variant) => {
                       const variantDiscount = calculateDiscount(variant);
                       const variantHasDiscount = hasDiscount(variant);
-                      
+
                       return (
                         <div
                           key={variant.variantId}
-                          className={`variant-card ${
-                            selectedVariant?.variantId === variant.variantId ? 'selected' : ''
-                          }`}
+                          className={`variant-card ${selectedVariant?.variantId === variant.variantId ? 'selected' : ''
+                            }`}
                           onClick={() => selectVariant(variant)}
                         >
                           <div className="variant-name">{variant.variantName}</div>
@@ -562,14 +639,16 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
           Back to Home
         </button>
         <h1 className="page-title">{categoryName}</h1>
-        <p className="products-count">{products.length} products found</p>
+        <p className="products-count">
+          {totalProducts} products found • Page {currentPage} of {totalPages}
+        </p>
       </div>
 
       {products.length === 0 ? (
         <div className="no-products">
           <p>No products found in {categoryName}.</p>
           <button
-            onClick={fetchProducts}
+            onClick={() => fetchProducts(1)}
             style={{
               marginTop: '1rem',
               padding: '0.5rem 1rem',
@@ -584,112 +663,116 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
           </button>
         </div>
       ) : (
-        <div className="products-grid">
-          {products.map((product) => {
-            const minPriceVariant = product.variants.reduce(
-              (min, variant) =>
-                !min || variant.afterDiscountAmount < min.afterDiscountAmount
-                  ? variant
-                  : min,
-              null
-            );
+        <>
+          <div className="products-grid">
+            {products.map((product) => {
+              const minPriceVariant = product.variants.reduce(
+                (min, variant) =>
+                  !min || variant.afterDiscountAmount < min.afterDiscountAmount
+                    ? variant
+                    : min,
+                null
+              );
 
-            const discount = minPriceVariant ? calculateDiscount(minPriceVariant) : null;
+              const discount = minPriceVariant ? calculateDiscount(minPriceVariant) : null;
 
-            return (
-              <div
-                key={product.productId}
-                className="product-card"
-                onClick={() => showProductDetail(product)}
-              >
-                <div className="product-image-container">
-                  <img
-                    src={getProductImage(product)}
-                    alt={product.productName}
-                    className="product-image"
-                    onError={(e) => {
-                      e.target.src = '/images/placeholder.jpg';
-                    }}
-                  />
-
-                  {discount && <div className="discount-badge">{discount}% OFF</div>}
-                  
-                  {product.isPlant && <div className="product-type-badge plant-badge">🌱 Plant</div>}
-                  {product.isFertilizer && <div className="product-type-badge fertilizer-badge">🌿 Fertilizer</div>}
-
-                  <button
-                    className={`wishlist-btn ${
-                      wishlist.has(product.productId) ? 'active' : ''
-                    }`}
-                    onClick={(e) => toggleWishlist(product.productId, e)}
-                  >
-                    <Heart
-                      size={18}
-                      fill={wishlist.has(product.productId) ? 'currentColor' : 'none'}
+              return (
+                <div
+                  key={product.productId}
+                  className="product-card"
+                  onClick={() => showProductDetail(product)}
+                >
+                  <div className="product-image-container">
+                    <img
+                      src={getProductImage(product)}
+                      alt={product.productName}
+                      className="product-image"
+                      onError={(e) => {
+                        e.target.src = '/images/placeholder.jpg';
+                      }}
                     />
-                  </button>
-                </div>
 
-                <div className="product-info">
-                  <h3 className="product-title">{product.productName}</h3>
+                    {discount && <div className="discount-badge">{discount}% OFF</div>}
 
-                  {minPriceVariant && (
-                    <div className="product-price">
-                      <span className="current-price">
-                        ₹{minPriceVariant.afterDiscountAmount}
-                      </span>
-                      {minPriceVariant.unitOfMeasurement && (
-                        <span className="unit-measurement">({minPriceVariant.unitOfMeasurement})</span>
-                      )}
-                      {hasDiscount(minPriceVariant) && (
-                        <span className="original-price">
-                          ₹{minPriceVariant.originalAmount}
+                    {product.isPlant && <div className="product-type-badge plant-badge">🌱 Plant</div>}
+                    {product.isFertilizer && <div className="product-type-badge fertilizer-badge">🌿 Fertilizer</div>}
+
+                    <button
+                      className={`wishlist-btn ${wishlist.has(product.productId) ? 'active' : ''
+                        }`}
+                      onClick={(e) => toggleWishlist(product.productId, e)}
+                    >
+                      <Heart
+                        size={18}
+                        fill={wishlist.has(product.productId) ? 'currentColor' : 'none'}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="product-info">
+                    <h3 className="product-title">{product.productName}</h3>
+
+                    {minPriceVariant && (
+                      <div className="product-price">
+                        <span className="current-price">
+                          ₹{minPriceVariant.afterDiscountAmount}
                         </span>
-                      )}
-                    </div>
-                  )}
+                        {minPriceVariant.unitOfMeasurement && (
+                          <span className="unit-measurement">({minPriceVariant.unitOfMeasurement})</span>
+                        )}
+                        {hasDiscount(minPriceVariant) && (
+                          <span className="original-price">
+                            ₹{minPriceVariant.originalAmount}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
-                  {product.variants && product.variants.length > 0 && (
-                    <div className="variants-section">
-                      <select
-                        className="variant-dropdown"
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                          const variantId = e.target.value;
-                          const variant = product.variants.find(
-                            (v) => v.variantId === parseInt(variantId)
-                          );
-                          selectVariant(variant);
-                        }}
-                        defaultValue={minPriceVariant?.variantId || ''}
-                      >
-                        {product.variants.map((variant) => (
-                          <option
-                            key={variant.variantId}
-                            value={variant.variantId}
-                          >
-                            {variant.variantName} - ₹{variant.afterDiscountAmount}
-                            {variant.unitOfMeasurement ? ` (${variant.unitOfMeasurement})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                    {product.variants && product.variants.length > 0 && (
+                      <div className="variants-section">
+                        <select
+                          className="variant-dropdown"
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const variantId = e.target.value;
+                            const variant = product.variants.find(
+                              (v) => v.variantId === parseInt(variantId)
+                            );
+                            selectVariant(variant);
+                          }}
+                          defaultValue={minPriceVariant?.variantId || ''}
+                        >
+                          {product.variants.map((variant) => (
+                            <option
+                              key={variant.variantId}
+                              value={variant.variantId}
+                            >
+                              {variant.variantName} - ₹{variant.afterDiscountAmount}
+                              {variant.unitOfMeasurement ? ` (${variant.unitOfMeasurement})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
-                  <button
-                    className="view-details-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      showProductDetail(product);
-                    }}
-                  >
-                    View Details
-                  </button>
+                    <button
+                      className="view-details-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        showProductDetail(product);
+                      }}
+                    >
+                      View Details
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination Component */}
+          <Pagination />
+        </>
       )}
     </div>
   );
