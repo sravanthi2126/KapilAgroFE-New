@@ -14,7 +14,7 @@ const Categories = ({ setCurrentPage }) => {
   const [hasPrevious, setHasPrevious] = useState(false);
   const navigate = useNavigate();
 
-  const fetchCategories = async (page = 0, size = 12) => {
+  const fetchCategories = async (page = 0, size = 4) => {
     try {
       setLoading(true);
       const response = await apiClient.get(`user/categories?page=${page}&size=${size}`);
