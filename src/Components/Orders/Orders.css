@@ -505,6 +505,19 @@
   font-weight: 700;
 }
 
+.payment-method-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.payment-method-info svg {
+  color: #6366f1;
+}
+
 .item-details-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

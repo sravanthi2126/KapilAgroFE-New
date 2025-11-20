@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import { apiClient, validateAndRefreshToken } from './services/authService';
 import { dismissAllToasts } from './utils/toastUtils';
 import Navbar from './Components/Navbar/Navbar';
@@ -23,6 +23,30 @@ import OrderConfirmation from './Components/OrderConfirmation/OrderConfirmation'
 import Orders from './Components/Orders/Orders';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
+
+// Unique ID for the login toast
+const LOGIN_REQUIRED_TOAST_ID = 'login-required-toast';
+
+// Helper function to check login status
+const isLoggedIn = () => {
+  return !!localStorage.getItem('token');
+};
+
+// New ProtectedRoute component
+const ProtectedRoute = ({ children }) => {
+  if (!isLoggedIn()) {
+    // FIX: Check if the toast is already visible before displaying it again
+    if (!toast.isActive(LOGIN_REQUIRED_TOAST_ID)) {
+        toast.error('Please login to view your orders.', { 
+            autoClose: 7000,
+            toastId: LOGIN_REQUIRED_TOAST_ID // Assign the unique ID
+        }); 
+    }
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 
 function ScrollToSection({ setCurrentPage }) {
   const { pathname } = useLocation();
@@ -67,6 +91,9 @@ function ScrollToSection({ setCurrentPage }) {
       setCurrentPage('order-confirmation');
     } else if (pathname === '/orders') {
       setCurrentPage('orders');
+    } else {
+      // Fallback for other non-navbar paths
+      setCurrentPage(pathname.slice(1));
     }
 
     const timer = setTimeout(() => {
@@ -85,6 +112,7 @@ function ScrollToSection({ setCurrentPage }) {
 }
 
 function App() {
+  
   const [currentPage, setCurrentPage] = useState('home');
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState(new Set());
@@ -93,7 +121,6 @@ function App() {
   useEffect(() => {
     const initializeAuth = async () => {
       const isValid = await validateAndRefreshToken();
-      console.log('Token validation result:', isValid);
       if (isValid) {
         const userId = localStorage.getItem('userId');
         if (userId) {
@@ -111,7 +138,6 @@ function App() {
           }
         }
       } else {
-        console.log('Token validation failed, clearing auth');
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
@@ -189,7 +215,7 @@ function App() {
                 <HeroSection setCurrentPage={setCurrentPage} />
                 <FreshLanding />
                 <Categories
-                  setCurrentPage={setCurrentPage}
+                  setCurrentPage={() => {}} 
                   cart={cart}
                   setCart={setCart}
                   wishlist={wishlist}
@@ -269,7 +295,7 @@ function App() {
           <Route
             path="/address"
             element={
-              <>
+              <ProtectedRoute>
                 <Navbar
                   currentPage={currentPage}
                   setCurrentPage={setCurrentPage}
@@ -280,13 +306,13 @@ function App() {
                   setIsLoginOpen={setIsLoginOpen}
                 />
                 <Address cart={cart} setCart={setCart} setIsLoginOpen={setIsLoginOpen} />
-              </>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/payment"
             element={
-              <>
+              <ProtectedRoute>
                 <Navbar
                   currentPage={currentPage}
                   setCurrentPage={setCurrentPage}
@@ -297,13 +323,13 @@ function App() {
                   setIsLoginOpen={setIsLoginOpen}
                 />
                 <Payment cart={cart} setCart={setCart} setIsLoginOpen={setIsLoginOpen} />
-              </>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/order-confirmation"
             element={
-              <>
+              <ProtectedRoute>
                 <Navbar
                   currentPage={currentPage}
                   setCurrentPage={setCurrentPage}
@@ -314,13 +340,13 @@ function App() {
                   setIsLoginOpen={setIsLoginOpen}
                 />
                 <OrderConfirmation />
-              </>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/orders"
             element={
-              <>
+              <ProtectedRoute>
                 <Navbar
                   currentPage={currentPage}
                   setCurrentPage={setCurrentPage}
@@ -331,7 +357,7 @@ function App() {
                   setIsLoginOpen={setIsLoginOpen}
                 />
                 <Orders />
-              </>
+              </ProtectedRoute>
             }
           />
           <Route path="/about" element={<Navigate to="/" replace />} />

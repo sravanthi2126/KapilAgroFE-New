@@ -84,7 +84,6 @@ export const scheduleTokenRefresh = () => {
       setTimeout(async () => {
         try {
           await refreshAccessToken();
-          console.log('Token refreshed proactively');
           scheduleTokenRefresh();
         } catch (error) {
           console.error('Proactive token refresh failed:', error);
@@ -136,15 +135,11 @@ apiClient.interceptors.request.use(
     if (token && !isTokenExpired(token)) {
       config.headers.Authorization = `Bearer ${token}`;
     } else if (token) {
-      console.log('Token expired, clearing auth');
       clearAuth();
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
     }
     
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
-      headers: config.headers,
-      data: config.data
-    });
+    
     
     return config;
   },
@@ -157,10 +152,7 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle errors globally
 apiClient.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-      status: response.status,
-      data: response.data
-    });
+   
     return response;
   },
   async (error) => {
@@ -191,30 +183,22 @@ apiClient.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          console.log('Unauthorized - Token expired or invalid');
           localStorage.removeItem('token');
           break;
         case 403:
-          console.log('Forbidden - Insufficient permissions');
           break;
         case 404:
-          console.log('Not Found - Resource does not exist');
           break;
         case 409:
-          console.log('Conflict - Resource already exists or conflict occurred');
           break;
         case 422:
-          console.log('Unprocessable Entity - Validation error');
           break;
         case 500:
-          console.log('Internal Server Error');
           break;
         default:
-          console.log(`HTTP Error: ${error.response.status}`);
       }
     } else if (error.request) {
       console.error('No response received:', error.request);
-      console.log('Network error or server is not responding');
     } else {
       console.error('Error setting up request:', error.message);
     }
@@ -254,7 +238,6 @@ export const authAPI = {
 
   // Registration OTP verification - FIXED ENDPOINT
   verifyRegisterOTP: async (phoneNo, otp) => {
-    console.log('Sending verify OTP request:', { phoneNo, otp });
     
     const response = await apiClient.post('/user/register/otp/verify', { 
       phoneNo: phoneNo.toString(),
