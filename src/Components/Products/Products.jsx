@@ -22,7 +22,7 @@ const Products = ({ setCurrentPage, cart, setCart, wishlist, setWishlist, setIsL
   const [currentPage, setCurrentPageState] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
-  const [pageSize] = useState(12); // Products per page
+  const [pageSize] = useState(15); // Products per page
 
   const { categoryId } = useParams();
   const { state } = useLocation();
