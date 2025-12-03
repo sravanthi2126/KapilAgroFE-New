@@ -3,8 +3,8 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8080',
-  // baseURL: 'https://shopapi.kapilagro.com',
+  // baseURL: 'http://localhost:8080',
+  baseURL: 'https://shopapi.kapilagro.com',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
