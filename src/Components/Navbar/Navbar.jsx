@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, Search as SearchIcon, Heart } from 'lucide-react';
+import { Menu, X, User, Search as SearchIcon, Heart, Package } from 'lucide-react';
 import Search from '../Search/Search';
 import { showSuccess, dismissAllToasts } from '../../utils/toastUtils';
 import './Navbar.css';
@@ -8,17 +8,103 @@ import Cart from '../Cart/Cart';
 import LoginModal from './LoginModal';
 import kapilAgroLogo from '../Assets/kapil agro logo.png';
 import kapilGroupLogo from '../Assets/kapil group.png';
-// ADD THESE IMPORTS
 import { isTokenExpired, scheduleTokenRefresh, setupAutoLogout } from '../../services/authService';
+
+// Update the LoginRequiredPopup component:
+const LoginRequiredPopup = ({ isOpen, onClose, pageType, onLoginClick }) => {
+  if (!isOpen) return null;
+
+  const messages = {
+    orders: {
+      title: "Login Required",
+      message: "Please login to view your orders.",
+      icon: <Package size={40} />
+    },
+    wishlist: {
+      title: "Login Required",
+      message: "Please login to view your wishlist.",
+      icon: <Heart size={40} />
+    }
+  };
+
+  const currentMessage = messages[pageType] || messages.orders;
+
+  return (
+    <div className="kapil-login-popup-overlay" onClick={onClose}>
+      <div className="kapil-login-popup" onClick={(e) => e.stopPropagation()}>
+        <div className="kapil-login-popup-header">
+          <h3>{currentMessage.title}</h3>
+          <button className="kapil-login-popup-close" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+        <div className="kapil-login-popup-content">
+          <div className="kapil-login-popup-icon">
+            {currentMessage.icon}
+          </div>
+          <p>{currentMessage.message}</p>
+          <button
+            className="kapil-login-popup-btn"
+            onClick={() => {
+              onClose(); // Close the popup
+              onLoginClick(); // Open the login modal
+            }}
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 
 const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set(), isLoginOpen, setIsLoginOpen }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [popupType, setPopupType] = useState('orders'); // ADD THIS
 
+
+  // Sync currentPage with current route AND handle special cases
+  useEffect(() => {
+    const path = location.pathname.replace('/', '');
+
+    // Handle special cases: about and contact are sections on home page
+    if (path === '' || path === 'home') {
+      // Check if we're already viewing about or contact section via URL hash
+      if (window.location.hash === '#about' || window.location.hash === '#fresh-landing') {
+        setCurrentPage('about');
+      } else if (window.location.hash === '#contact' || window.location.hash === '#footer') {
+        setCurrentPage('contact');
+      } else {
+        setCurrentPage('home');
+      }
+    } else {
+      setCurrentPage(path);
+    }
+  }, [location.pathname, setCurrentPage]);
+
+  // Listen for hash changes (for about/contact sections)
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (location.pathname === '/' || location.pathname === '') {
+        if (window.location.hash === '#about' || window.location.hash === '#fresh-landing') {
+          setCurrentPage('about');
+        } else if (window.location.hash === '#contact' || window.location.hash === '#footer') {
+          setCurrentPage('contact');
+        } else if (window.location.hash === '' || window.location.hash === '#home') {
+          setCurrentPage('home');
+        }
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [location.pathname, setCurrentPage]);
 
   useEffect(() => {
     const loadUser = () => {
@@ -27,7 +113,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
 
       if (storedUser && token) {
         try {
-          // Check if token is expired
           if (isTokenExpired(token)) {
             console.log('Token expired during page load, auto-logging out');
             handleLogout();
@@ -35,8 +120,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
           }
 
           setUser(JSON.parse(storedUser));
-
-          // Schedule token refresh and auto-logout
           scheduleTokenRefresh();
           setupAutoLogout();
 
@@ -62,7 +145,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
       setIsLoginOpen(false);
       console.log('userLoggedIn event, setting isLoginOpen to false');
 
-      // Setup auto-logout for new login
       const token = localStorage.getItem('token');
       if (token && !isTokenExpired(token)) {
         setupAutoLogout();
@@ -70,7 +152,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     };
 
     const handleLogoutEvent = () => {
-      // setIsLoginOpen(true);
       setUser(null);
       setCart([]);
       setIsMobileMenuOpen(false);
@@ -80,7 +161,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     window.addEventListener('userLoggedIn', handleLoginEvent);
     window.addEventListener('userLoggedOut', handleLogoutEvent);
 
-    // Cleanup function
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('userLoggedIn', handleLoginEvent);
@@ -88,7 +168,6 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     };
   }, [setIsLoginOpen, setCart]);
 
-  // Click outside to close mobile menu
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (isMobileMenuOpen &&
@@ -118,6 +197,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     window.dispatchEvent(new CustomEvent('userLoggedOut'));
     showSuccess('Logged out successfully');
     navigate('/');
+    setCurrentPage('home');
   };
 
   const toggleMobileSearch = () => {
@@ -141,48 +221,65 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
       const offset = 80;
       const y = section.getBoundingClientRect().top + window.pageYOffset - offset;
       window.scrollTo({ top: y, behavior: 'smooth' });
+
+      // Update URL hash to reflect the section
+      window.history.replaceState(null, null, `#${sectionId}`);
+
       return true;
     }
     return false;
   };
 
   const handleNavigation = (page) => {
-    setCurrentPage(page); // Set the current page state immediately
+    console.log(`Navigating to ${page} from ${location.pathname}`);
+
+    // Check if user is logged in for protected pages - SHOW POPUP INSTEAD OF LOGIN MODAL
+    if ((page === 'orders' || page === 'wishlist') && !user) {
+      console.log('User not logged in, showing popup for:', page);
+      setPopupType(page); // Set which page they tried to access
+      setShowLoginPopup(true); // Show the popup
+      setIsMobileMenuOpen(false);
+      setIsMobileSearchOpen(false);
+      return; // Don't navigate, just show popup
+    }
+    // Set current page immediately for visual feedback
+    setCurrentPage(page);
     setIsMobileMenuOpen(false);
     setIsMobileSearchOpen(false);
 
-    if (page === 'home') {
-      if (window.location.pathname === '/') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        navigate('/');
-        // The ScrollToSection component in App.js will handle setting 'home' and scrolling after navigation completes
-      }
-      return;
-    }
-
-    if (page === 'categories') {
-      navigate('/categories');
-      return;
-    }
-
+    // Handle special cases for about and contact (they are sections on home page)
     if (page === 'about' || page === 'contact') {
-      if (window.location.pathname === '/') {
-        const sectionId = page === 'about' ? 'fresh-landing' : 'footer';
-        if (!scrollToSection(sectionId)) {
-          // This path is technically blocked by <Navigate to="/" replace /> in App.js, but keeping logic just in case.
-          navigate(`/${page}`); 
-        }
+      const sectionId = page === 'about' ? 'fresh-landing' : 'footer';
+
+      if (location.pathname === '/') {
+        // Already on home page, scroll to section and update URL hash
+        scrollToSection(sectionId);
       } else {
+        // Navigate to home first
         navigate('/');
+        // Scroll after a short delay to ensure page is loaded
         setTimeout(() => {
-          const sectionId = page === 'about' ? 'fresh-landing' : 'footer';
-          scrollToSection(sectionId); // Scroll after navigating to home page
-        }, 300);
+          scrollToSection(sectionId);
+        }, 100);
       }
       return;
     }
 
+    // Handle home page navigation
+    if (page === 'home') {
+      if (location.pathname === '/') {
+        // Already on home page, scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Clear any hash from URL
+        window.history.replaceState(null, null, '/');
+      } else {
+        // Navigate to home
+        navigate('/');
+      }
+      return;
+    }
+
+    // Handle other pages (categories, orders, etc.)
     navigate(`/${page}`);
   };
 
@@ -192,9 +289,12 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
   };
 
   const handleWishlistClick = () => {
-    setCurrentPage('wishlist');
-    navigate('/wishlist');
-    setIsMobileMenuOpen(false);
+    handleNavigation('wishlist');
+  };
+
+  // Determine if a page is active
+  const isPageActive = (page) => {
+    return currentPage === page;
   };
 
   return (
@@ -232,8 +332,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
           {['home', 'categories', 'about', 'contact', 'orders'].map((page) => (
             <button
               key={page}
-              // The class is correctly applied based on the 'currentPage' state
-              className={`kapil-nav-item ${currentPage === page ? 'kapil-nav-item-active' : ''}`}
+              className={`kapil-nav-item ${isPageActive(page) ? 'kapil-nav-item-active' : ''}`}
               onClick={() => handleNavigation(page)}
             >
               {page.charAt(0).toUpperCase() + page.slice(1)}
@@ -320,7 +419,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
               {['home', 'categories', 'about', 'contact', 'orders'].map((page) => (
                 <button
                   key={page}
-                  className={`kapil-mobile-menu-item ${currentPage === page ? 'kapil-mobile-active' : ''}`}
+                  className={`kapil-mobile-menu-item ${isPageActive(page) ? 'kapil-mobile-active' : ''}`}
                   onClick={() => handleNavigation(page)}
                 >
                   {page.charAt(0).toUpperCase() + page.slice(1)}
@@ -370,6 +469,15 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
         </div>
       )}
 
+      <LoginRequiredPopup
+        isOpen={showLoginPopup}
+        onClose={() => setShowLoginPopup(false)}
+        pageType={popupType}
+        onLoginClick={() => {
+          setIsLoginOpen(true); // This opens the login modal
+        }}
+      />
+      
       <LoginModal
         isOpen={isLoginOpen}
         setIsOpen={setIsLoginOpen}
