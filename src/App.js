@@ -37,10 +37,10 @@ const ProtectedRoute = ({ children }) => {
   if (!isLoggedIn()) {
     // FIX: Check if the toast is already visible before displaying it again
     if (!toast.isActive(LOGIN_REQUIRED_TOAST_ID)) {
-        toast.error('Please login to view your orders.', { 
-            autoClose: 7000,
-            toastId: LOGIN_REQUIRED_TOAST_ID // Assign the unique ID
-        }); 
+      toast.error('Please login to view your orders.', {
+        autoClose: 7000,
+        toastId: LOGIN_REQUIRED_TOAST_ID // Assign the unique ID
+      });
     }
     return <Navigate to="/" replace />;
   }
@@ -48,71 +48,73 @@ const ProtectedRoute = ({ children }) => {
 };
 
 
-function ScrollToSection({ setCurrentPage }) {
-  const { pathname } = useLocation();
+// function ScrollToSection({ setCurrentPage }) {
+//   const { pathname } = useLocation();
 
-  useEffect(() => {
-    const handleLoggedOut = () => {
-      // Do not trigger additional toasts here
-    };
+//   useEffect(() => {
+//     const handleLoggedOut = () => {
+//       // Do not trigger additional toasts here
+//     };
 
-    window.addEventListener('userLoggedOut', handleLoggedOut);
+//     window.addEventListener('userLoggedOut', handleLoggedOut);
 
-    if (pathname === '/') {
-      setCurrentPage('home');
-    } else if (pathname === '/about') {
-      setCurrentPage('about');
-      const section = document.getElementById('fresh-landing');
-      if (section) {
-        const offset = 80;
-        const y = section.getBoundingClientRect().top + window.pageYOffset - offset;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-      }
-    } else if (pathname === '/contact') {
-      setCurrentPage('contact');
-      const section = document.getElementById('footer');
-      if (section) {
-        const offset = 80;
-        const y = section.getBoundingClientRect().top + window.pageYOffset - offset;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-      }
-    } else if (pathname === '/categories') {
-      setCurrentPage('categories');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (pathname.startsWith('/products')) {
-      setCurrentPage('categories');
-    } else if (pathname === '/wishlist') {
-      setCurrentPage('wishlist');
-    } else if (pathname === '/address') {
-      setCurrentPage('address');
-    } else if (pathname === '/payment') {
-      setCurrentPage('payment');
-    } else if (pathname === '/order-confirmation') {
-      setCurrentPage('order-confirmation');
-    } else if (pathname === '/orders') {
-      setCurrentPage('orders');
-    } else {
-      // Fallback for other non-navbar paths
-      setCurrentPage(pathname.slice(1));
-    }
+//     if (pathname === '/') {
+//       setCurrentPage('home');
+//     }
+//      else if (pathname === '/about') {
+//       setCurrentPage('about');
+//       const section = document.getElementById('fresh-landing');
+//       if (section) {
+//         const offset = 80;
+//         const y = section.getBoundingClientRect().top + window.pageYOffset - offset;
+//         window.scrollTo({ top: y, behavior: 'smooth' });
+//       }
+//     }
+//     else if (pathname === '/contact') {
+//       setCurrentPage('contact');
+//       const section = document.getElementById('footer');
+//       if (section) {
+//         const offset = 80;
+//         const y = section.getBoundingClientRect().top + window.pageYOffset - offset;
+//         window.scrollTo({ top: y, behavior: 'smooth' });
+//       }
+//     } else if (pathname === '/categories') {
+//       setCurrentPage('categories');
+//       window.scrollTo({ top: 0, behavior: 'smooth' });
+//     } else if (pathname.startsWith('/products')) {
+//       setCurrentPage('categories');
+//     } else if (pathname === '/wishlist') {
+//       setCurrentPage('wishlist');
+//     } else if (pathname === '/address') {
+//       setCurrentPage('address');
+//     } else if (pathname === '/payment') {
+//       setCurrentPage('payment');
+//     } else if (pathname === '/order-confirmation') {
+//       setCurrentPage('order-confirmation');
+//     } else if (pathname === '/orders') {
+//       setCurrentPage('orders');
+//     } else {
+//       // Fallback for other non-navbar paths
+//       setCurrentPage(pathname.slice(1));
+//     }
 
-    const timer = setTimeout(() => {
-      if (!window.location.pathname.includes('/logout')) {
-        dismissAllToasts();
-      }
-    }, 500);
+//     const timer = setTimeout(() => {
+//       if (!window.location.pathname.includes('/logout')) {
+//         dismissAllToasts();
+//       }
+//     }, 500);
 
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('userLoggedOut', handleLoggedOut);
-    };
-  }, [pathname, setCurrentPage]);
+//     return () => {
+//       clearTimeout(timer);
+//       window.removeEventListener('userLoggedOut', handleLoggedOut);
+//     };
+//   }, [pathname, setCurrentPage]);
 
-  return null;
-}
+//   return null;
+// }
 
 function App() {
-  
+
   const [currentPage, setCurrentPage] = useState('home');
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState(new Set());
@@ -197,7 +199,7 @@ function App() {
           pauseOnHover
           theme="colored"
         />
-        <ScrollToSection setCurrentPage={setCurrentPage} />
+        {/* <ScrollToSection setCurrentPage={setCurrentPage} /> */}
         <Routes>
           <Route
             path="/"
