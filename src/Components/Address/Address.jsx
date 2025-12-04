@@ -266,9 +266,11 @@ const Address = ({ setIsLoginOpen }) => {
         errorMessage = 'Session expired. Please log in again';
         localStorage.removeItem('token');
         toast.info(errorMessage, { autoClose: 5000, onClick: () => setIsLoginOpen(true) });
-      } else if (err.code === 'ECONNABORTED') {
-        errorMessage = 'Request timeout. Please try again';
-      } else if (!err.response) {
+      }
+      //  else if (err.code === 'ECONNABORTED') {
+      //   errorMessage = 'Request timeout. Please try again';
+      // }
+      else if (!err.response) {
         errorMessage = 'Network error. Please check your connection';
       }
 
@@ -405,7 +407,7 @@ const Address = ({ setIsLoginOpen }) => {
                   <div className="pincode-success-message">
                     <CheckCircle size={16} color="#16a34a" />
                     <span>
-                      Pincode is serviceable! 
+                      Pincode is serviceable!
                     </span>
                   </div>
                 )}

@@ -76,7 +76,7 @@ export const scheduleTokenRefresh = () => {
     const decoded = jwtDecode(token);
     const currentTime = Math.floor(Date.now() / 1000);
     const expiresIn = decoded.exp - currentTime;
-    
+
     // Refresh 30 seconds before expiry (for 5-minute tokens)
     const refreshTime = (expiresIn - 30) * 1000;
 
@@ -108,7 +108,7 @@ export const setupAutoLogout = () => {
 
     if (timeUntilExpiry > 0) {
       console.log(`Auto-logout scheduled in ${Math.round(timeUntilExpiry / 1000)} seconds`);
-      
+
       setTimeout(() => {
         console.log('Token expired, auto-logging out...');
         clearAuth();
@@ -138,9 +138,9 @@ apiClient.interceptors.request.use(
       clearAuth();
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
     }
-    
-    
-    
+
+
+
     return config;
   },
   (error) => {
@@ -152,7 +152,7 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle errors globally
 apiClient.interceptors.response.use(
   (response) => {
-   
+
     return response;
   },
   async (error) => {
@@ -202,7 +202,7 @@ apiClient.interceptors.response.use(
     } else {
       console.error('Error setting up request:', error.message);
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -223,8 +223,8 @@ export const authAPI = {
 
   // Phone OTP verification for login
   verifyLoginOTP: async (phoneNo, otp) => {
-    const response = await apiClient.post('/user/login/otp/verify', { 
-      phoneNo, 
+    const response = await apiClient.post('/user/login/otp/verify', {
+      phoneNo,
       otp: otp.toString()
     });
     return response.data;
@@ -238,12 +238,12 @@ export const authAPI = {
 
   // Registration OTP verification - FIXED ENDPOINT
   verifyRegisterOTP: async (phoneNo, otp) => {
-    
-    const response = await apiClient.post('/user/register/otp/verify', { 
+
+    const response = await apiClient.post('/user/register/otp/verify', {
       phoneNo: phoneNo.toString(),
       otp: otp.toString()
     });
-    
+
     return response.data;
   },
 
@@ -276,10 +276,10 @@ export const post = async (url, data = {}, config = {}) => {
 export const put = async (url, data = {}, config = {}) => {
   try {
     const isFormData = config.headers?.['Content-Type'] === 'application/x-www-form-urlencoded';
-    
+
     let requestData = data;
     let requestConfig = { ...config };
-    
+
     if (isFormData) {
       const formData = new URLSearchParams();
       for (const [key, value] of Object.entries(data)) {
@@ -296,7 +296,7 @@ export const put = async (url, data = {}, config = {}) => {
         'Content-Type': 'application/json',
       };
     }
-    
+
     const response = await apiClient.put(url, requestData, requestConfig);
     return response.data;
   } catch (error) {
@@ -322,7 +322,7 @@ export const getAuthToken = () => {
 export const clearAuth = () => {
   const itemsToRemove = [
     'token',
-    'refreshToken', 
+    'refreshToken',
     'user',
     'userId',
     'role',
@@ -330,20 +330,20 @@ export const clearAuth = () => {
     'email',
     'phoneNo'
   ];
-  
+
   itemsToRemove.forEach(item => localStorage.removeItem(item));
   delete apiClient.defaults.headers.Authorization;
-  
+
   console.log('Authentication cleared - user logged out');
 };
 
 export const validateAndRefreshToken = async () => {
   const token = localStorage.getItem('token');
-  
+
   if (!token) {
     return false;
   }
-  
+
   if (isTokenExpired(token)) {
     try {
       await refreshAccessToken();
@@ -354,7 +354,7 @@ export const validateAndRefreshToken = async () => {
       return false;
     }
   }
-  
+
   return true;
 };
 

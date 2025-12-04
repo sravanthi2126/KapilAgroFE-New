@@ -110,7 +110,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
             if (response.status === 201 && response.data.status === 'success') {
                 const newDetails = response.data.data;
-                
+
                 // CRITICAL FIX: Use the complete order details returned from the backend.
                 setCurrentOrderDetails(prev => ({
                     ...prev,
@@ -126,7 +126,7 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
             }
         } catch (err) {
             console.error('Error recalculating order details:', err);
-            
+
             // --- NEW: Handle 401/403 during recalculation ---
             if (err.response && (err.response.status === 403 || err.response.status === 401)) {
                 toast.error('Session expired. Please log in again to complete checkout.', { onClick: () => setIsLoginOpen(true) });
@@ -186,14 +186,14 @@ const Payment = ({ cart, setCart, setIsLoginOpen }) => {
 
             // CRITICAL CHECK: Ensure we have the Razorpay Order ID from the server's initiate call
             if (!orderData.razorpayOrderId) {
-                 throw new Error('Razorpay Order ID is missing. Please restart checkout.');
+                throw new Error('Razorpay Order ID is missing. Please restart checkout.');
             }
 
             // REMOVED REDUNDANT API CALL: The Razorpay order is created during the /user/orders/initiate call.
 
             return new Promise((resolve, reject) => {
                 const options = {
-                    key: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_OCmyT47D47k8rb',
+                    key: process.env.REACT_APP_RAZORPAY_KEY_ID,
                     amount: Math.round(parseFloat(orderData.totalAmount) * 100),
                     currency: 'INR',
                     name: 'Kapil Agro',

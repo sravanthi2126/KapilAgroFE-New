@@ -70,23 +70,28 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
 
 
   // Sync currentPage with current route AND handle special cases
-  useEffect(() => {
-    const path = location.pathname.replace('/', '');
+    useEffect(() => {
+    const path = location.pathname.toLowerCase().replace(/^\/+/, '') || 'home';
+    const hash = window.location.hash.toLowerCase();
 
-    // Handle special cases: about and contact are sections on home page
-    if (path === '' || path === 'home') {
-      // Check if we're already viewing about or contact section via URL hash
-      if (window.location.hash === '#about' || window.location.hash === '#fresh-landing') {
-        setCurrentPage('about');
-      } else if (window.location.hash === '#contact' || window.location.hash === '#footer') {
-        setCurrentPage('contact');
-      } else {
-        setCurrentPage('home');
-      }
+    let page = 'home';
+
+    if (path !== '' && path !== 'home') {
+      page = path;
     } else {
-      setCurrentPage(path);
+      // We're on home page — check hash
+      if (hash.includes('fresh-landing') || hash.includes('about')) {
+        page = 'about';
+      } else if (hash.includes('footer') || hash.includes('contact')) {
+        page = 'contact';
+      } else {
+        page = 'home';
+      }
     }
-  }, [location.pathname, setCurrentPage]);
+
+    setCurrentPage(page);
+  }, [location.pathname, location.hash, setCurrentPage]);
+
 
   // Listen for hash changes (for about/contact sections)
   useEffect(() => {
@@ -251,16 +256,18 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
     if (page === 'about' || page === 'contact') {
       const sectionId = page === 'about' ? 'fresh-landing' : 'footer';
 
-      if (location.pathname === '/') {
-        // Already on home page, scroll to section and update URL hash
-        scrollToSection(sectionId);
-      } else {
-        // Navigate to home first
+      // Set page immediately
+      setCurrentPage(page);
+
+      if (location.pathname !== '/' && location.pathname !== '/home') {
         navigate('/');
-        // Scroll after a short delay to ensure page is loaded
+        // Wait for home page to load, then scroll and confirm page
         setTimeout(() => {
           scrollToSection(sectionId);
-        }, 100);
+          setCurrentPage(page); // Force it again
+        }, 150);
+      } else {
+        scrollToSection(sectionId);
       }
       return;
     }
@@ -477,7 +484,7 @@ const Navbar = ({ currentPage, setCurrentPage, cart, setCart, wishlist = new Set
           setIsLoginOpen(true); // This opens the login modal
         }}
       />
-      
+
       <LoginModal
         isOpen={isLoginOpen}
         setIsOpen={setIsLoginOpen}

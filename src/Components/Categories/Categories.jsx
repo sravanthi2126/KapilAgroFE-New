@@ -66,19 +66,19 @@ const Categories = ({ setCurrentPage }) => {
   const getPageNumbers = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
-    
+
     // Adjust start page if we're near the end
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(0, endPage - maxVisiblePages + 1);
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-    
+
     return pages;
   };
 
@@ -115,7 +115,7 @@ const Categories = ({ setCurrentPage }) => {
       <div className="categories-header">
         <h1 className="categories-title">Browse Categories</h1>
         <p className="categories-subtitle">Discover our wide range of product categories</p>
-        
+
         {/* Pagination Info */}
         {totalCategories > 0 && (
           <div className="pagination-info">
@@ -126,13 +126,13 @@ const Categories = ({ setCurrentPage }) => {
           </div>
         )}
       </div>
-      
+
       <div className="categories-grid">
         {categories.map((category) => (
           <div key={category.categoryId} className="category-card">
             <div className="category-image-container">
-              <img 
-                src={category.categoryImg} 
+              <img
+                src={category.categoryImg}
                 alt={category.categoryName}
                 className="category-image"
                 loading="lazy"
@@ -143,11 +143,11 @@ const Categories = ({ setCurrentPage }) => {
                 </div>
               </div>
             </div>
-            
+
             <div className="category-content">
               <h3 className="category-name">{category.categoryName}</h3>
-              
-              <button 
+
+              <button
                 className="view-products-btn"
                 onClick={() => handleCategoryClick(category.categoryId, category.categoryName)}
               >
@@ -164,7 +164,7 @@ const Categories = ({ setCurrentPage }) => {
       {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="pagination-controls">
-          <button 
+          <button
             className="pagination-btn prev-btn"
             onClick={handlePreviousPage}
             disabled={!hasPrevious}
@@ -187,7 +187,7 @@ const Categories = ({ setCurrentPage }) => {
             ))}
           </div>
 
-          <button 
+          <button
             className="pagination-btn next-btn"
             onClick={handleNextPage}
             disabled={!hasNext}
